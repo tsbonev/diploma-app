@@ -1,0 +1,28 @@
+package com.tsbonev.cqrs.core
+
+/**
+ * @author Tsvetozar Bonev (tsbonev@gmail.com)
+ */
+data class BinaryPayload(val payload: ByteArray) {
+
+	constructor(payload: String) : this(payload.toByteArray(Charsets.UTF_8))
+
+	override fun equals(other: Any?): Boolean {
+		if (this === other) return true
+		if (javaClass != other?.javaClass) return false
+
+		other as BinaryPayload
+
+		if (!payload.contentEquals(other.payload)) return false
+
+		return true
+	}
+
+	override fun hashCode(): Int {
+		return payload.contentHashCode()
+	}
+
+	override fun toString(): String {
+		return "BinaryPayload(payload=${payload.toString(Charsets.UTF_8)})"
+	}
+}
