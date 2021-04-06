@@ -5,7 +5,7 @@ import com.tsbonev.cqrs.core.CommandHandler
 import com.tsbonev.cqrs.core.Event
 import com.tsbonev.cqrs.core.EventHandler
 import com.tsbonev.cqrs.core.EventWithBinaryPayload
-import com.tsbonev.cqrs.core.FailedValidationException
+import com.tsbonev.cqrs.core.ValidationException
 
 /**
  * @author Tsvetozar Bonev (tsbonev@gmail.com)
@@ -50,7 +50,7 @@ class SimpleMessageBus : MessageBus {
 
 		val errors = handler.validation.validate(command)
 		if (errors.isNotEmpty()) {
-			throw FailedValidationException(errors)
+			throw ValidationException(errors)
 		}
 
 		return handler.handler.handle(command)

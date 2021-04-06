@@ -1,5 +1,6 @@
 package com.tsbonev.cqrs.core.eventstore
 
+import com.tsbonev.cqrs.core.snapshot.Snapshot
 import java.util.UUID
 
 /**

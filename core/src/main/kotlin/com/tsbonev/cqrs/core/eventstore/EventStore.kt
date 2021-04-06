@@ -1,5 +1,7 @@
 package com.tsbonev.cqrs.core.eventstore
 
+import com.tsbonev.cqrs.core.snapshot.Snapshot
+
 /**
  * @author Tsvetozar Bonev (tsbonev@gmail.com)
  */

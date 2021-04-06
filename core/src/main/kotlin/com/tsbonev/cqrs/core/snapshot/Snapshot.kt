@@ -1,4 +1,4 @@
-package com.tsbonev.cqrs.core.eventstore
+package com.tsbonev.cqrs.core.snapshot
 
 import com.tsbonev.cqrs.core.BinaryPayload
 
