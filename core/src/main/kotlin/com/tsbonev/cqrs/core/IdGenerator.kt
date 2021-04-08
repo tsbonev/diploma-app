@@ -1,8 +1,6 @@
 package com.tsbonev.cqrs.core
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface IdGenerator {
 	/**
 	 * Generates a new id for the sequence.

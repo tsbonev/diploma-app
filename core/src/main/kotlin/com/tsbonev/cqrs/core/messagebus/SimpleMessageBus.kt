@@ -7,9 +7,7 @@ import com.tsbonev.cqrs.core.EventHandler
 import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.ValidationException
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class SimpleMessageBus : MessageBus {
 
 	private val commandHandlers: MutableMap<String, ValidatedCommandHandler<Command<Any>, Any>> = mutableMapOf()

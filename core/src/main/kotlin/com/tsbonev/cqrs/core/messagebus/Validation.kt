@@ -1,8 +1,6 @@
 package com.tsbonev.cqrs.core.messagebus
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class Validation<in T>(private val validations: Map<String, ChildValidation<T>>) {
 	companion object {
 		operator fun <T> invoke(init: ValidationBuilder<T>.() -> Unit): Validation<T> {

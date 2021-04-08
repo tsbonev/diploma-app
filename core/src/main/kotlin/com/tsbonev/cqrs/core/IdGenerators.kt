@@ -2,9 +2,7 @@ package com.tsbonev.cqrs.core
 
 import java.time.LocalDateTime
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 object IdGenerators {
 
 	/**

@@ -1,8 +1,6 @@
 package com.tsbonev.cqrs.core
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class AggregateAdapter<T : Aggregate>(private val applyCallName: String) {
 
 	private val supportedEventNameToType = mutableMapOf<String, String>()

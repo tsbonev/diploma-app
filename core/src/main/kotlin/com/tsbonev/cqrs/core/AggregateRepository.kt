@@ -1,8 +1,6 @@
 package com.tsbonev.cqrs.core
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface AggregateRepository {
 	/**
 	 * Creates a new or updates an existing aggregate in the repository.

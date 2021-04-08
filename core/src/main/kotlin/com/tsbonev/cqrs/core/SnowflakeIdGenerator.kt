@@ -6,9 +6,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 internal class SnowflakeIdGenerator : IdGenerator {
 	private val nodeId: Int
 	private val epoch: Long

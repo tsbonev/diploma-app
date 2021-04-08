@@ -1,8 +1,6 @@
 package com.tsbonev.cqrs.core
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 data class BinaryPayload(val payload: ByteArray) {
 
 	constructor(payload: String) : this(payload.toByteArray(Charsets.UTF_8))

@@ -4,7 +4,7 @@ import com.tsbonev.cqrs.core.BinaryPayload
 import com.tsbonev.cqrs.core.Event
 import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.PublishErrorException
-import com.tsbonev.cqrs.testing.InMemoryMessageBus
+import com.tsbonev.cqrs.testing.messagebus.InMemoryMessageBus
 import org.hamcrest.Matchers
 import org.jmock.AbstractExpectations
 import org.jmock.Expectations
@@ -15,9 +15,7 @@ import org.junit.Test
 import org.hamcrest.CoreMatchers.`is` as Is
 import org.junit.Assert.assertThat
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class SyncEventPublisherTest {
 
 	@Rule

@@ -14,9 +14,7 @@ import com.tsbonev.cqrs.core.snapshot.Snapshot
 import java.io.ByteArrayInputStream
 import java.util.UUID
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class SimpleIdentityAggregateRepository(
 	private val eventStore: EventStore,
 	private val messageFormat: MessageFormat,

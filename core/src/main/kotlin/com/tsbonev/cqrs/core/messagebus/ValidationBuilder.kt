@@ -1,8 +1,6 @@
 package com.tsbonev.cqrs.core.messagebus
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class ValidationBuilder<T> {
 	var childValidations: MutableMap<String, ChildValidation<T>> = mutableMapOf()
 

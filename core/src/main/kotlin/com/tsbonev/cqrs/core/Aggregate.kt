@@ -3,9 +3,7 @@ package com.tsbonev.cqrs.core
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.snapshot.SnapshotMapper
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 
 /**
  * Aggregate interface

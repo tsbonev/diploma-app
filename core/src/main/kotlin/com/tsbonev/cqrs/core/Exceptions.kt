@@ -2,9 +2,7 @@ package com.tsbonev.cqrs.core
 
 import java.lang.RuntimeException
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class AggregateNotFoundException(aggregateId: String) : RuntimeException()
 
 class EventCollisionException(aggregateId: String, val version: Long) : RuntimeException()

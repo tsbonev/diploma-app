@@ -2,9 +2,7 @@ package com.tsbonev.cqrs.core.snapshot
 
 import com.tsbonev.cqrs.core.Aggregate
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface SnapshotMapper<T : Aggregate> {
 
 	/**

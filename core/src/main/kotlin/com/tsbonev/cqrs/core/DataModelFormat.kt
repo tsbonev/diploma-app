@@ -3,9 +3,7 @@ package com.tsbonev.cqrs.core
 import java.io.InputStream
 import java.lang.reflect.Type
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface DataModelFormat {
 	/**
 	 * Parses JSON content from the provided input stream.

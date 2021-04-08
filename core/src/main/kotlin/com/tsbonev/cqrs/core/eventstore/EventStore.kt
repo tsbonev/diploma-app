@@ -2,9 +2,7 @@ package com.tsbonev.cqrs.core.eventstore
 
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface EventStore {
 	fun saveEvents(request: SaveEventsRequest, saveOptions: SaveOptions = SaveOptions(version = 0L)): SaveEventsResponse
 

@@ -7,9 +7,7 @@ import java.io.ByteArrayInputStream
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 abstract class AggregateBase private constructor(protected var aggregateId: String = "", protected var version: Long = 0L): Aggregate {
 	private val mutations: ArrayList<Any> = arrayListOf();
 

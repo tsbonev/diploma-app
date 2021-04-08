@@ -16,9 +16,7 @@ import java.util.UUID
 import org.hamcrest.CoreMatchers.`is` as Is
 import org.junit.Assert.assertThat
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class SimpleMessageBusTest {
 
 	@Test

@@ -2,9 +2,7 @@ package com.tsbonev.cqrs.core
 
 import java.time.Instant
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface IdentityProvider {
 
 	/**

@@ -1,8 +1,6 @@
 package com.tsbonev.cqrs.core.messagebus
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 class ChildValidation<T> {
 	var validations: MutableList<Pair<T.() -> Boolean, String>> = mutableListOf()
 

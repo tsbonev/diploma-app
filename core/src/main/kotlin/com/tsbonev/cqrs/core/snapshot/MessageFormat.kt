@@ -2,9 +2,7 @@ package com.tsbonev.cqrs.core.snapshot
 
 import java.io.InputStream
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface MessageFormat {
 
 	/**

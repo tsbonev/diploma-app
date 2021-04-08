@@ -9,9 +9,7 @@ import com.tsbonev.cqrs.core.EventHandler
 import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.HydrationException
 
-/**
- * @author Tsvetozar Bonev (tsbonev@gmail.com)
- */
+
 interface MessageBus {
 
 	fun <T : Command<R>, R> registerCommandHandler(aClass: Class<T>, handler: CommandHandler<T, R>, validation: Validation<T> = Validation {})
