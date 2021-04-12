@@ -9,27 +9,27 @@ sealed class AuthoredAggregateRepository(private val identityProvider: IdentityP
                                          private val identityAggregateRepository: IdentityAggregateRepository
 ) : AggregateRepository {
 
-	override fun <T : Aggregate> commit(aggregate: T) {
+	override fun <T : AggregateRoot> save(aggregate: T) {
 		val identity = identityProvider.get()
-		identityAggregateRepository.commit(aggregate, identity)
+		identityAggregateRepository.save(aggregate, identity)
 	}
 
-	override fun <T : Aggregate> commit(stream: String, aggregate: T) {
+	override fun <T : AggregateRoot> save(stream: String, aggregate: T) {
 		val identity = identityProvider.get()
-		identityAggregateRepository.commit(stream, aggregate, identity)
+		identityAggregateRepository.save(stream, aggregate, identity)
 	}
 
-	override fun <T : Aggregate> getById(id: String, type: Class<T>): T {
+	override fun <T : AggregateRoot> getById(id: String, type: Class<T>): T {
 		val identity = identityProvider.get()
 		return identityAggregateRepository.getById(id, type, identity)
 	}
 
-	override fun <T : Aggregate> getById(stream: String, aggregateId: String, type: Class<T>): T {
+	override fun <T : AggregateRoot> getById(stream: String, aggregateId: String, type: Class<T>): T {
 		val identity = identityProvider.get()
 		return identityAggregateRepository.getById(stream, aggregateId, type, identity)
 	}
 
-	override fun <T : Aggregate> getByIds(ids: List<String>, type: Class<T>): Map<String, T> {
+	override fun <T : AggregateRoot> getByIds(ids: List<String>, type: Class<T>): Map<String, T> {
 		val identity = identityProvider.get()
 		return identityAggregateRepository.getByIds(ids, type, identity)
 	}

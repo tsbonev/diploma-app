@@ -1,9 +1,9 @@
 package com.tsbonev.cqrs.core.snapshot
 
-import com.tsbonev.cqrs.core.Aggregate
+import com.tsbonev.cqrs.core.AggregateRoot
 
 
-interface SnapshotMapper<T : Aggregate> {
+interface SnapshotMapper<T : AggregateRoot> {
 
 	/**
 	 * Serializes the current entity to a string snapshot

@@ -22,7 +22,7 @@ class SimpleIdentityAggregateRepository(
 	private val configuration: AggregateConfiguration
 ) : IdentityAggregateRepository {
 
-	override fun <T : Aggregate> commit(stream: String, aggregate: T, identity: Identity) {
+	override fun <T : AggregateRoot> save(stream: String, aggregate: T, identity: Identity) {
 		var aggregateId = aggregate.getId()
 		if (aggregateId == "") {
 			aggregateId = UUID.randomUUID().toString()
@@ -124,7 +124,7 @@ class SimpleIdentityAggregateRepository(
 	 * @throws EventCollisionException is thrown in case of
 	 */
 	@Throws(EventCollisionException::class, PublishErrorException::class)
-	override fun <T : Aggregate> commit(aggregate: T, identity: Identity) {
+	override fun <T : AggregateRoot> save(aggregate: T, identity: Identity) {
 		val aggregateClass = aggregate::class.java
 		val aggregateType = aggregateClass.simpleName
 		var aggregateId = aggregate.getId()
@@ -133,10 +133,10 @@ class SimpleIdentityAggregateRepository(
 			aggregateId = UUID.randomUUID().toString()
 		}
 
-		return this.commit(StreamKey.of(aggregateType, aggregateId), aggregate, identity)
+		return this.save(StreamKey.of(aggregateType, aggregateId), aggregate, identity)
 	}
 
-	override fun <T : Aggregate> getById(stream: String, aggregateId: String, type: Class<T>, identity: Identity): T {
+	override fun <T : AggregateRoot> getById(stream: String, aggregateId: String, type: Class<T>, identity: Identity): T {
 		when (val response = eventStore.getEventsFromStreams(
 			GetEventsFromStreamsRequest(identity.tenant, listOf(stream)))
 			) {
@@ -161,7 +161,7 @@ class SimpleIdentityAggregateRepository(
 		}
 	}
 
-	override fun <T : Aggregate> getById(id: String, type: Class<T>, identity: Identity): T {
+	override fun <T : AggregateRoot> getById(id: String, type: Class<T>, identity: Identity): T {
 		val stream = StreamKey.of(type.simpleName, id)
 
 		when (val response = eventStore.getEventsFromStreams(
@@ -185,7 +185,7 @@ class SimpleIdentityAggregateRepository(
 		}
 	}
 
-	override fun <T : Aggregate> getByIds(ids: List<String>, type: Class<T>, identity: Identity): Map<String, T> {
+	override fun <T : AggregateRoot> getByIds(ids: List<String>, type: Class<T>, identity: Identity): Map<String, T> {
 		val aggregateType = type.simpleName
 		if (ids.isEmpty()) {
 			return mapOf()
@@ -214,7 +214,7 @@ class SimpleIdentityAggregateRepository(
 		}
 	}
 
-	private fun <T : Aggregate> buildAggregateFromHistory(type: Class<T>, events: List<EventPayload>, version: Long, id: String, snapshot: Snapshot? = null): T {
+	private fun <T : AggregateRoot> buildAggregateFromHistory(type: Class<T>, events: List<EventPayload>, version: Long, id: String, snapshot: Snapshot? = null): T {
 		val adapter = AggregateAdapter<T>("apply")
 		adapter.fetchMetadata(type)
 		val history = mutableListOf<Any>()

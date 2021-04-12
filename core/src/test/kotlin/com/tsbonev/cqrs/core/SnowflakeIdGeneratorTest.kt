@@ -1,6 +1,6 @@
 package com.tsbonev.cqrs.core
 
-import com.tsbonev.cqrs.testing.IdGeneratorContract
+import com.tsbonev.cqrs.core.testcontracts.IdGeneratorContract
 import org.junit.Test
 import org.hamcrest.CoreMatchers.`is` as Is
 import org.junit.Assert.assertThat
@@ -14,5 +14,9 @@ class SnowflakeIdGeneratorTest : IdGeneratorContract() {
 		val id1 = generator.nextId()
 		val id2 = generator.nextId()
 		assertThat(id1 < id2, Is(true))
+	}
+
+	override fun createSequenceGenerator(): IdGenerator {
+		return IdGenerators.snowflake()
 	}
 }

@@ -5,5 +5,5 @@ interface AggregateConfiguration {
 	/**
 	 * Determines the topic name of the AggregateRoot.
 	 */
-	fun topicName(aggregate: Aggregate): String
+	fun topicName(aggregate: AggregateRoot): String
 }

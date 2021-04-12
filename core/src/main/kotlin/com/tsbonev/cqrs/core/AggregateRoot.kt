@@ -8,7 +8,7 @@ import com.tsbonev.cqrs.core.snapshot.SnapshotMapper
 /**
  * Aggregate interface
  */
-interface Aggregate {
+interface AggregateRoot {
 
 	/**
 	 * Returns the Id of the Aggregate
@@ -40,10 +40,10 @@ interface Aggregate {
 	 * Returns a SnapshotMapper that will be used in creation
 	 * of Snapshots for the EventStore
 	 */
-	fun getSnapshotMapper(): SnapshotMapper<Aggregate>
+	fun getSnapshotMapper(): SnapshotMapper<AggregateRoot>
 
 	/**
 	 * Builds an aggregate from snapshot data and the current version of the snapshot
 	 */
-	fun <T : Aggregate> fromSnapshot(snapshotData: ByteArray, snapshotVersion: Long, messageFormat: MessageFormat): T
+	fun <T : AggregateRoot> fromSnapshot(snapshotData: ByteArray, snapshotVersion: Long, messageFormat: MessageFormat): T
 }
