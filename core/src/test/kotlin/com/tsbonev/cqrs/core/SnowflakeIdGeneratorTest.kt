@@ -1,6 +1,6 @@
 package com.tsbonev.cqrs.core
 
-import com.tsbonev.cqrs.core.testcontracts.IdGeneratorContract
+import com.tsbonev.cqrs.core.contracts.IdGeneratorContract
 import org.junit.Test
 import org.hamcrest.CoreMatchers.`is` as Is
 import org.junit.Assert.assertThat

@@ -1,4 +1,4 @@
-package com.tsbonev.cqrs.core.testcontracts
+package com.tsbonev.cqrs.core.contracts
 
 import com.google.gson.Gson
 import com.tsbonev.cqrs.core.DataModelFormat

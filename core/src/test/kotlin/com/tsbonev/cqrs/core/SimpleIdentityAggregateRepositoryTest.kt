@@ -5,7 +5,7 @@ import com.tsbonev.cqrs.core.eventstore.GetEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.helpers.InMemoryEventPublisher
 import com.tsbonev.cqrs.core.helpers.InMemoryEventStore
-import com.tsbonev.cqrs.core.testcontracts.TestMessageFormat
+import com.tsbonev.cqrs.core.contracts.TestMessageFormat
 import org.hamcrest.CoreMatchers
 import org.junit.Assert
 import org.junit.Test

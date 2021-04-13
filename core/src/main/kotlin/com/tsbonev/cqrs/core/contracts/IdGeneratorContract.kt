@@ -1,4 +1,4 @@
-package com.tsbonev.cqrs.core.testcontracts
+package com.tsbonev.cqrs.core.contracts
 
 import com.tsbonev.cqrs.core.IdGenerator
 import org.hamcrest.CoreMatchers
