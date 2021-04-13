@@ -1,5 +1,6 @@
 package com.tsbonev.cqrs.core
 
+import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.snapshot.SnapshotMapper
 
@@ -19,7 +20,7 @@ interface AggregateRoot {
 
 	fun commitEvents()
 
-	fun getEvents(): List<Any>
+	fun getEvents(): List<Event>
 
 	/**
 	 * Builds the state of an aggregate from a given history
@@ -28,7 +29,7 @@ interface AggregateRoot {
 	 * @param version the version of the aggregate
 	 * @throws HydrationException
 	 */
-	fun buildFromHistory(history: Iterable<Any>, version: Long)
+	fun buildFromHistory(history: Iterable<Event>, version: Long)
 
 	/**
 	 * Returns the version of the aggregate when it was hydrated

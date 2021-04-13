@@ -1,58 +1,34 @@
 package com.tsbonev.cqrs.core.helpers
 
-import com.tsbonev.cqrs.core.Command
-import com.tsbonev.cqrs.core.CommandHandler
-import com.tsbonev.cqrs.core.Event
-import com.tsbonev.cqrs.core.EventHandler
 import com.tsbonev.cqrs.core.EventWithBinaryPayload
+import com.tsbonev.cqrs.core.messagebus.Command
+import com.tsbonev.cqrs.core.messagebus.CommandResponse
+import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.messagebus.Interceptor
 import com.tsbonev.cqrs.core.messagebus.MessageBus
-import com.tsbonev.cqrs.core.messagebus.ValidatedCommandHandler
-import com.tsbonev.cqrs.core.messagebus.Validation
+import com.tsbonev.cqrs.core.messagebus.SimpleMessageBus
+import com.tsbonev.nharker.cqrs.Workflow
 
 @Suppress("UNCHECKED_CAST")
-class InMemoryMessageBus() : MessageBus {
-	val handledEvents = mutableListOf<EventWithBinaryPayload>()
-	val sentCommands = mutableListOf<Command<Any>>()
+class InMemoryMessageBus(private val messageBus: SimpleMessageBus = SimpleMessageBus()) : MessageBus {
+	val handledEvents = mutableListOf<Event>()
+	val sentCommands = mutableListOf<Command>()
 
-
-	private val commandHandlers: MutableMap<String, ValidatedCommandHandler<Command<Any>, Any>> = mutableMapOf()
-
-
-	override fun handle(event: EventWithBinaryPayload) {
-		handledEvents.add(event)
-	}
-
-	override fun <T : Command<V>, V> registerCommandHandler(aClass: Class<T>, handler: CommandHandler<T, V>, validation: Validation<T>) {
-		val key = aClass.name
-
-		val commandHandler = ValidatedCommandHandler(handler, validation)
-		@Suppress("UNCHECKED_CAST")
-		commandHandlers[key] = commandHandler as ValidatedCommandHandler<Command<Any>, Any>
-
-	}
-
-	override fun <T : Event> registerEventHandler(aClass: Class<T>, handler: EventHandler<T>) {
-
-	}
-
-
-	override fun <T : Command<V>, V> send(command: T): V {
-		sentCommands.add(command as Command<Any>)
-
-		val key = command::class.java.name
-
-		if (!commandHandlers.containsKey(key)) {
-			throw IllegalArgumentException("No proper handler found!")
-		}
-
-		val handler = commandHandlers[key] as ValidatedCommandHandler<T, V>
-
-		return handler.handler.handle(command)
-
+	override fun registerWorkflow(workflow: Workflow) {
+		messageBus.registerWorkflow(workflow)
 	}
 
 	override fun registerInterceptor(interceptor: Interceptor) {
 
+	}
+
+	override fun <T : Command> send(command: T): CommandResponse {
+		sentCommands.add(command)
+
+		return messageBus.send(command)
+	}
+
+	override fun publish(event: EventWithBinaryPayload) {
+		handledEvents.add(event.event)
 	}
 }

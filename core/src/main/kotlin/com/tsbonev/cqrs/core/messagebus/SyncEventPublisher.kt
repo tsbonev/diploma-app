@@ -9,7 +9,7 @@ class SyncEventPublisher(private val messageBus: MessageBus) : EventPublisher {
 	override fun publish(events: Iterable<EventWithBinaryPayload>) {
 		events.forEach {
 			try {
-				messageBus.handle(it)
+				messageBus.publish(it)
 			} catch (ex: Exception) {
 				throw PublishErrorException(ex)
 			}

@@ -9,6 +9,7 @@ import com.tsbonev.cqrs.core.eventstore.GetEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveEventsRequest
 import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveOptions
+import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import java.io.ByteArrayInputStream
@@ -217,10 +218,10 @@ class SimpleIdentityAggregateRepository(
 	private fun <T : AggregateRoot> buildAggregateFromHistory(type: Class<T>, events: List<EventPayload>, version: Long, id: String, snapshot: Snapshot? = null): T {
 		val adapter = AggregateAdapter<T>("apply")
 		adapter.fetchMetadata(type)
-		val history = mutableListOf<Any>()
+		val history = mutableListOf<Event>()
 		events.forEach {
 			if (messageFormat.supportsKind(it.kind)) {
-				val event = messageFormat.parse<Any>(ByteArrayInputStream(it.data.payload), it.kind)
+				val event = messageFormat.parse<Any>(ByteArrayInputStream(it.data.payload), it.kind) as Event
 				history.add(event)
 			}
 		}

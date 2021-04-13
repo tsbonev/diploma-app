@@ -1,5 +1,6 @@
 package com.tsbonev.cqrs.core
 
+import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import com.tsbonev.cqrs.core.snapshot.SnapshotMapper
@@ -8,8 +9,9 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 
 
-abstract class AggregateRootBase private constructor(protected var aggregateId: String = "", protected var version: Long = 0L): AggregateRoot {
-	private val mutations: ArrayList<Any> = arrayListOf();
+abstract class AggregateRootBase private constructor(protected var aggregateId: String = "",
+                                                     protected var version: Long = 0L): AggregateRoot {
+	private val mutations: ArrayList<Event> = arrayListOf();
 
 	constructor(): this("")
 
@@ -21,7 +23,7 @@ abstract class AggregateRootBase private constructor(protected var aggregateId: 
 		mutations.clear()
 	}
 
-	override fun getEvents(): List<Any> {
+	override fun getEvents(): List<Event> {
 		return mutations
 	}
 
@@ -29,14 +31,14 @@ abstract class AggregateRootBase private constructor(protected var aggregateId: 
 		return version
 	}
 
-	override fun buildFromHistory(history: Iterable<Any>, version: Long) {
+	override fun buildFromHistory(history: Iterable<Event>, version: Long) {
 		this.version = version
 		for (event in history) {
 			applyChange(event, false)
 		}
 	}
 
-	protected fun applyChange(event: Any, isNew: Boolean = true) {
+	protected fun applyChange(event: Event, isNew: Boolean = true) {
 		var method: Method? = null
 
 		try {

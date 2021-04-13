@@ -1,6 +1,7 @@
 package com.tsbonev.cqrs.core
 
 import com.tsbonev.cqrs.core.helpers.InMemoryAggregateRepository
+import com.tsbonev.cqrs.core.messagebus.Event
 import org.hamcrest.CoreMatchers
 import org.junit.Test
 import org.hamcrest.CoreMatchers.`is` as Is

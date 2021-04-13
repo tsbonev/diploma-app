@@ -1,12 +1,10 @@
 package com.tsbonev.cqrs.core.messagebus
 
 import com.tsbonev.cqrs.core.BinaryPayload
-import com.tsbonev.cqrs.core.Command
-import com.tsbonev.cqrs.core.CommandHandler
-import com.tsbonev.cqrs.core.Event
-import com.tsbonev.cqrs.core.EventHandler
 import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.ValidationException
+import com.tsbonev.nharker.cqrs.StatusCode
+import com.tsbonev.nharker.cqrs.Workflow
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.nullValue
@@ -23,11 +21,11 @@ class SimpleMessageBusTest {
 	fun `Handles event with a single handler`() {
 		val msgBus = SimpleMessageBus()
 
-		val handler = MyEventHandler()
-		msgBus.registerEventHandler(MyEvent::class.java, handler)
+		val handler = DummyWorkflow()
+		msgBus.registerWorkflow(handler)
 
-		val event = EventWithBinaryPayload(MyEvent(UUID.randomUUID()), BinaryPayload(""))
-		msgBus.handle(event)
+		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		msgBus.publish(event)
 
 		assertThat(handler.lastEvent, Is(equalTo(event.event)))
 	}
@@ -36,95 +34,69 @@ class SimpleMessageBusTest {
 	fun `Handles event with multiple handler`() {
 		val msgBus = SimpleMessageBus()
 
-		val firstHandler = MyEventHandler()
-		val secondHandler = AnotherHandler()
+		val firstHandler = DummyWorkflow()
+		val secondHandler = SecondDummyWorkflow()
 
-		msgBus.registerEventHandler(MyEvent::class.java, firstHandler)
-		msgBus.registerEventHandler(MyEvent::class.java, secondHandler)
+		msgBus.registerWorkflow(firstHandler)
+		msgBus.registerWorkflow(secondHandler)
 
-		val event = EventWithBinaryPayload(MyEvent(UUID.randomUUID()), BinaryPayload(""))
-		msgBus.handle(event)
+		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		msgBus.publish(event)
 
-		assertThat(firstHandler.lastEvent, Is(CoreMatchers.equalTo(event.event)))
-		assertThat(secondHandler.lastEvent, Is(CoreMatchers.equalTo(event.event)))
+		assertThat(firstHandler.lastEvent, Is(equalTo(event.event)))
+		assertThat(secondHandler.lastEvent, Is(equalTo(event.event)))
 
 	}
 
 	@Test
 	fun `No handlers are set`() {
 		val msgBus = SimpleMessageBus()
-		msgBus.handle(EventWithBinaryPayload(MyEvent(UUID.randomUUID()), BinaryPayload("")))
+		msgBus.publish(EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload("")))
 	}
 
 	@Test
 	fun `Handles command with command handler`() {
 		val msgBus = SimpleMessageBus()
 
-		val handler = ChangeCustomerNameHandler()
-		msgBus.registerCommandHandler(ChangeCustomerName::class.java, handler)
+		val handler = DummyWorkflow()
+		msgBus.registerWorkflow(handler)
 
-		val changeCustomerNameAction = ChangeCustomerName("Action")
-		msgBus.send(changeCustomerNameAction)
+		val dummyCommand = DummyCommand("::test::")
+		msgBus.send(dummyCommand)
 
-		assertThat(handler.lastCommand, Is(changeCustomerNameAction))
+		assertThat(handler.lastCommand, Is(dummyCommand))
 	}
 
 	@Test
 	fun `Handles command with command handler and returns a response`() {
 		val msgBus = SimpleMessageBus()
 
-		val handler = ChangeCustomerNameHandler()
-		msgBus.registerCommandHandler(ChangeCustomerName::class.java, handler)
+		val handler = DummyWorkflow()
+		msgBus.registerWorkflow(handler)
 
-		val changeCustomerNameAction = ChangeCustomerName("Action")
-		val response = msgBus.send(changeCustomerNameAction)
+		val dummyCommand = DummyCommand("::test::")
+		val response = msgBus.send(dummyCommand)
 
-		assertThat(response, Is("OK"))
-		assertThat(handler.lastCommand, Is(changeCustomerNameAction))
+		assertThat(response, Is(CommandResponse(StatusCode.OK)))
+		assertThat(handler.lastCommand, Is(dummyCommand))
 	}
 
-	@Test(expected = IllegalArgumentException::class)
+	@Test(expected = NoHandlersInWorkflowException::class)
 	fun `No proper handler is set`() {
 		val msgBus = SimpleMessageBus()
 
-		val changeCustomerNameAction = ChangeCustomerName("Action")
-		msgBus.send(changeCustomerNameAction)
+		val dummyCommand = DummyCommand("::test::")
+		msgBus.send(dummyCommand)
 	}
 
-	@Test
-	fun `Validate receiving command`() {
-		val msgBus = SimpleMessageBus()
-
-		val handler = ChangeCustomerNameHandler()
-		msgBus.registerCommandHandler(ChangeCustomerName::class.java, handler, Validation {
-			"name" {
-				be {
-					name.length > 5
-				} not "name: must be at least 5 characters long"
-			}
-		})
-
-		val changeCustomerNameAction = ChangeCustomerName("Jo")
-		try {
-			msgBus.send(changeCustomerNameAction)
-			Assert.fail("validation was not performed during sending of an invalidation action")
-		} catch (ex: ValidationException) {
-			assertThat(
-				ex.errors,
-				Is(equalTo(mapOf("name" to listOf("name: must be at least 5 characters long"))))
-			)
-			assertThat(handler.lastCommand, Is(nullValue()))
-		}
-	}
-
-	@Test(expected = java.lang.IllegalArgumentException::class)
+	@Test(expected = NoHandlersInWorkflowException::class)
 	fun `Handles dispatched commands by type`() {
 		val msgBus = SimpleMessageBus()
 
-		val handler = ChangeCustomerNameHandler()
-		msgBus.registerCommandHandler(ChangeCustomerName::class.java, handler)
+		val handler = DummyWorkflow()
+		msgBus.registerWorkflow(handler)
 
-		msgBus.send(DummyCommand())
+		msgBus.send(SecondDummyCommand("::test::"))
 
 		assertThat(handler.lastCommand, Is(nullValue()))
 	}
@@ -134,14 +106,18 @@ class SimpleMessageBusTest {
 		val msgBus = SimpleMessageBus()
 		val callLog = mutableListOf<String>()
 
-		msgBus.registerEventHandler(MyEvent::class.java, object : EventHandler<MyEvent> {
-			override fun handle(event: MyEvent) {
+		msgBus.registerWorkflow(object : Workflow {
+			@EventHandler
+			fun handle(event: DummyEvent) {
 				callLog.add("called handler")
 			}
-
 		})
 
 		msgBus.registerInterceptor(object : Interceptor {
+			fun intercept(chain: Interceptor) {
+				callLog.add("called before")
+			}
+
 			override fun intercept(chain: Interceptor.Chain) {
 				callLog.add("called before")
 				chain.proceed(chain.event())
@@ -149,8 +125,8 @@ class SimpleMessageBusTest {
 			}
 		})
 
-		val event = EventWithBinaryPayload(MyEvent(UUID.randomUUID()), BinaryPayload(""))
-		msgBus.handle(event)
+		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		msgBus.publish(event)
 
 		assertThat(
 			callLog, Is(
@@ -178,8 +154,8 @@ class SimpleMessageBusTest {
 			}
 		})
 
-		val event = EventWithBinaryPayload(MyEvent(UUID.randomUUID()), BinaryPayload(""))
-		msgBus.handle(event)
+		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		msgBus.publish(event)
 
 		assertThat(
 			callLog, Is(
@@ -194,34 +170,31 @@ class SimpleMessageBusTest {
 	}
 
 
-	class ChangeCustomerNameHandler : CommandHandler<ChangeCustomerName, String> {
-
-		var lastCommand: ChangeCustomerName? = null
-
-		override fun handle(command: ChangeCustomerName): String {
+	class DummyWorkflow : Workflow {
+		var lastCommand: DummyCommand? = null
+		var lastEvent: DummyEvent? = null
+		
+		@CommandHandler
+		fun handle(command: DummyCommand) : CommandResponse {
 			lastCommand = command
-			return "OK"
+			return CommandResponse(StatusCode.OK)
 		}
-	}
 
-	class DummyCommand : Command<String>
-
-	class ChangeCustomerName(val name: String) : Command<String>
-
-	class MyEventHandler : EventHandler<MyEvent> {
-		var lastEvent: MyEvent? = null
-		override fun handle(event: MyEvent) {
+		@EventHandler
+		fun handle(event: DummyEvent) {
 			lastEvent = event
 		}
 	}
-
-	class AnotherHandler : EventHandler<MyEvent> {
-		var lastEvent: MyEvent? = null
-
-		override fun handle(event: MyEvent) {
+	
+	class SecondDummyWorkflow: Workflow {
+		var lastEvent: DummyEvent? = null
+		
+		@EventHandler
+		fun handle(event: DummyEvent) {
 			lastEvent = event
 		}
 	}
-
-	class MyEvent(val name: UUID) : Event
+	class DummyCommand(val name: String) : Command
+	class SecondDummyCommand(val name: String) : Command
+	class DummyEvent(val name: UUID) : Event
 }

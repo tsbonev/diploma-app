@@ -6,6 +6,7 @@ import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.helpers.InMemoryEventPublisher
 import com.tsbonev.cqrs.core.helpers.InMemoryEventStore
 import com.tsbonev.cqrs.core.contracts.TestMessageFormat
+import com.tsbonev.cqrs.core.messagebus.Event
 import org.hamcrest.CoreMatchers
 import org.junit.Assert
 import org.junit.Test
@@ -372,7 +373,8 @@ data class TestAggregate private constructor(var string: String, var long: Long,
 	}
 }
 
-data class TestClassCreatedEvent(val id: String, val string: String, val long: Long, val testObject: TestObject, val list: List<TestObject>) : Event
+data class TestClassCreatedEvent(val id: String, val string: String, val long: Long, val testObject: TestObject, val list: List<TestObject>) :
+	Event
 
 data class ChangeStringEvent(val newString: String) : Event
 

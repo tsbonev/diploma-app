@@ -3,17 +3,18 @@ package com.tsbonev.cqrs.core.helpers
 import com.tsbonev.cqrs.core.AggregateNotFoundException
 import com.tsbonev.cqrs.core.AggregateRepository
 import com.tsbonev.cqrs.core.AggregateRoot
+import com.tsbonev.cqrs.core.messagebus.Event
 
 class InMemoryAggregateRepository : AggregateRepository {
 	private val aggregateIdToEvents = mutableMapOf<String, MutableList<AggregatedEvent>>()
 
 	override fun <T : AggregateRoot> save(aggregate: T) {
 		val changes = aggregate.getEvents().toMutableList()
-		val events = changes.map { AggregatedEvent(aggregate.getId()!!, it) }.toMutableList()
+		val events = changes.map { AggregatedEvent(aggregate.getId(), it) }.toMutableList()
 		if (aggregateIdToEvents.containsKey(aggregate.getId())) {
 			aggregateIdToEvents[aggregate.getId()]!!.addAll(events)
 		} else {
-			aggregateIdToEvents[aggregate.getId()!!] = events
+			aggregateIdToEvents[aggregate.getId()] = events
 		}
 
 		aggregate.commitEvents()
@@ -21,7 +22,7 @@ class InMemoryAggregateRepository : AggregateRepository {
 
 	override fun <T : AggregateRoot> save(stream: String, aggregate: T) {
 		val changes = aggregate.getEvents().toMutableList()
-		val events = changes.map { AggregatedEvent(aggregate.getId()!!, it) }.toMutableList()
+		val events = changes.map { AggregatedEvent(aggregate.getId(), it) }.toMutableList()
 		if (aggregateIdToEvents.containsKey(stream)) {
 			aggregateIdToEvents[stream]!!.addAll(events)
 		} else {
@@ -55,13 +56,13 @@ class InMemoryAggregateRepository : AggregateRepository {
 	}
 
 	override fun <T : AggregateRoot> getByIds(ids: List<String>, type: Class<T>): Map<String, T> {
-		return ids.filter { aggregateIdToEvents.containsKey(it) }.map {
+		return ids.filter { aggregateIdToEvents.containsKey(it) }.map { aggregateEvents ->
 			val instance = type.newInstance() as T
-			val events = aggregateIdToEvents[it]!!.map { it.event }
+			val events = aggregateIdToEvents[aggregateEvents]!!.map { it.event }
 			instance.buildFromHistory(events, events.size.toLong())
-			Pair(it, instance)
+			Pair(aggregateEvents, instance)
 		}.toMap()
 	}
 }
 
-data class AggregatedEvent(val aggregateId: String, val event: Any)
+data class AggregatedEvent(val aggregateId: String, val event: Event)

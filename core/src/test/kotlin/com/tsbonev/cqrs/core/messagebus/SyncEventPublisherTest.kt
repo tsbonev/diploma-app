@@ -1,7 +1,6 @@
 package com.tsbonev.cqrs.core.messagebus
 
 import com.tsbonev.cqrs.core.BinaryPayload
-import com.tsbonev.cqrs.core.Event
 import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.PublishErrorException
 import com.tsbonev.cqrs.core.helpers.InMemoryMessageBus
@@ -35,7 +34,7 @@ class SyncEventPublisherTest {
 			secondEvent
 		))
 
-		assertThat(messageBus.handledEvents, Matchers.containsInAnyOrder(firstEvent, secondEvent))
+		assertThat(messageBus.handledEvents.toList(), Matchers.containsInAnyOrder(firstEvent.event, secondEvent.event))
 	}
 
 	@Test
@@ -45,7 +44,7 @@ class SyncEventPublisherTest {
 
 		context.checking(object : Expectations() {
 			init {
-				oneOf(mockedMessageBus).handle(firstEvent)
+				oneOf(mockedMessageBus).publish(firstEvent)
 				will(AbstractExpectations.throwException(MyException("Some message!")))
 			}
 		})
