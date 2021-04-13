@@ -55,7 +55,7 @@ interface MessageBus {
 	 * @param event The event to publish.
 	 */
 	@Throws(Exception::class)
-	fun publish(event: EventWithBinaryPayload)
+	fun publish(event: Event)
 }
 
 /**

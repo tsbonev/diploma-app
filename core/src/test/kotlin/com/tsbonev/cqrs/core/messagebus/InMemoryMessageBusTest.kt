@@ -32,7 +32,7 @@ class InMemoryMessageBusTest {
 	@Test
 	fun `Handles events`() {
 		val messageBus = InMemoryMessageBus()
-		messageBus.publish(EventWithBinaryPayload(DummyEvent(), BinaryPayload("::payload::")))
+		messageBus.publish(DummyEvent())
 		assertThat(
 			messageBus.handledEvents[0],
 			Is(CoreMatchers.equalTo(DummyEvent()))

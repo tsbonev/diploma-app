@@ -24,10 +24,10 @@ class SimpleMessageBusTest {
 		val handler = DummyWorkflow()
 		msgBus.registerWorkflow(handler)
 
-		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		val event = DummyEvent(UUID.randomUUID())
 		msgBus.publish(event)
 
-		assertThat(handler.lastEvent, Is(equalTo(event.event)))
+		assertThat(handler.lastEvent, Is(equalTo(event)))
 	}
 
 	@Test
@@ -40,18 +40,18 @@ class SimpleMessageBusTest {
 		msgBus.registerWorkflow(firstHandler)
 		msgBus.registerWorkflow(secondHandler)
 
-		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		val event = DummyEvent(UUID.randomUUID())
 		msgBus.publish(event)
 
-		assertThat(firstHandler.lastEvent, Is(equalTo(event.event)))
-		assertThat(secondHandler.lastEvent, Is(equalTo(event.event)))
+		assertThat(firstHandler.lastEvent, Is(equalTo(event)))
+		assertThat(secondHandler.lastEvent, Is(equalTo(event)))
 
 	}
 
 	@Test
 	fun `No handlers are set`() {
 		val msgBus = SimpleMessageBus()
-		msgBus.publish(EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload("")))
+		msgBus.publish(DummyEvent(UUID.randomUUID()))
 	}
 
 	@Test
@@ -125,7 +125,7 @@ class SimpleMessageBusTest {
 			}
 		})
 
-		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		val event = DummyEvent(UUID.randomUUID())
 		msgBus.publish(event)
 
 		assertThat(
@@ -154,7 +154,7 @@ class SimpleMessageBusTest {
 			}
 		})
 
-		val event = EventWithBinaryPayload(DummyEvent(UUID.randomUUID()), BinaryPayload(""))
+		val event = DummyEvent(UUID.randomUUID())
 		msgBus.publish(event)
 
 		assertThat(

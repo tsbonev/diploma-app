@@ -99,27 +99,27 @@ class SimpleMessageBus : MessageBus {
 			?: throw NoHandlersInWorkflowException("No handler registered for $key command class")
 	}
 
-	override fun publish(event: EventWithBinaryPayload) {
-		val key = event.event::class.java.name
+	override fun publish(event: Event) {
+		val key = event::class.java.name
 
 		val handlers = eventHandlers[key]
 
 		if (handlers == null) {
 			interceptors.forEach {
-				it.intercept(SimpleChain(event.event, listOf()))
+				it.intercept(SimpleChain(event, listOf()))
 			}
 			return logger.warn("No handlers registered for $key event class")
 		}
 
 		if (interceptors.isNotEmpty()) {
 			interceptors.forEach {
-				it.intercept(SimpleChain(event.event, handlers))
+				it.intercept(SimpleChain(event, handlers))
 			}
 			return
 		}
 
 		handlers.forEach {
-			it.invoke(event.event)
+			it.invoke(event)
 		}
 	}
 

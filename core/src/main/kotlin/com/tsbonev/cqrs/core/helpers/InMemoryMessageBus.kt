@@ -28,7 +28,7 @@ class InMemoryMessageBus(private val messageBus: SimpleMessageBus = SimpleMessag
 		return messageBus.send(command)
 	}
 
-	override fun publish(event: EventWithBinaryPayload) {
-		handledEvents.add(event.event)
+	override fun publish(event: Event) {
+		handledEvents.add(event)
 	}
 }

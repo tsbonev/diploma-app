@@ -17,11 +17,12 @@ import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveOptions
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import org.hamcrest.CoreMatchers
-import org.hamcrest.CoreMatchers.`is`
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import java.util.UUID
+import org.hamcrest.CoreMatchers.`is` as Is
+import org.junit.Assert.assertThat
 
 abstract class EventStoreContract {
 
@@ -44,8 +45,8 @@ abstract class EventStoreContract {
 
 		when (response) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					response, `is`(
+				assertThat(
+					response, Is(
 						CoreMatchers.equalTo(
 							(
 									GetEventsResponse.Success(
@@ -87,8 +88,8 @@ abstract class EventStoreContract {
 		                                     SaveOptions(version = 1)
 		) as SaveEventsResponse.Success
 
-		Assert.assertThat(
-			response.aggregate, `is`(
+		assertThat(
+			response.aggregate, Is(
 				CoreMatchers.equalTo(
 					ConcreteAggregate(
 						"Invoice", null, 2L, listOf(
@@ -113,8 +114,8 @@ abstract class EventStoreContract {
 
 		when (response) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					response, `is`(
+				assertThat(
+					response, Is(
 						CoreMatchers.equalTo(
 							(
 									GetEventsResponse.Success(
@@ -166,8 +167,8 @@ abstract class EventStoreContract {
 
 		when (response) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					response.aggregates, CoreMatchers.`is`(
+				assertThat(
+					response.aggregates, Is(
 						CoreMatchers.hasItems(
 							ConcreteAggregate(
 								"Invoice",
@@ -200,8 +201,8 @@ abstract class EventStoreContract {
 
 		when (response) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					response, `is`(
+				assertThat(
+					response, Is(
 						CoreMatchers.equalTo(
 							(
 									GetEventsResponse.Success(
@@ -233,7 +234,7 @@ abstract class EventStoreContract {
 
 		when (saveResult) {
 			is SaveEventsResponse.EventCollision -> {
-				Assert.assertThat(saveResult.expectedVersion, CoreMatchers.`is`(CoreMatchers.equalTo(1L)))
+				assertThat(saveResult.expectedVersion, Is(CoreMatchers.equalTo(1L)))
 			}
 			else -> Assert.fail("got un-expected save result: $saveResult")
 		}
@@ -255,8 +256,8 @@ abstract class EventStoreContract {
 		when (response) {
 			is RevertEventsResponse.Success -> {
 				val resp = eventStore.getEventsFromStreams(GetEventsFromStreamsRequest("tenant1", "Order_$aggregateId")) as GetEventsResponse.Success
-				Assert.assertThat(
-					resp, `is`(
+				assertThat(
+					resp, Is(
 						CoreMatchers.equalTo(
 							GetEventsResponse.Success(
 								listOf(
@@ -321,8 +322,8 @@ abstract class EventStoreContract {
 
 		when (response) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					response, `is`(
+				assertThat(
+					response, Is(
 						CoreMatchers.equalTo(
 							(
 									GetEventsResponse.Success(
@@ -366,9 +367,9 @@ abstract class EventStoreContract {
 		                                                      SaveOptions(version = 1)
 		) as SaveEventsResponse.SnapshotRequired
 
-		Assert.assertThat(
+		assertThat(
 			eventLimitReachedResponse.currentEvents,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					listOf(
 						EventPayload(
@@ -392,10 +393,10 @@ abstract class EventStoreContract {
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(null, 5, ReadDirection.FORWARD)) as GetAllEventsResponse.Success
 
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(1)))
-		Assert.assertThat(
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(1)))
+		assertThat(
 			response.events[0].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -407,7 +408,7 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(response.nextPosition!!.value, `is`(CoreMatchers.equalTo(response.events[0].position.value)))
+		assertThat(response.nextPosition!!.value, Is(CoreMatchers.equalTo(response.events[0].position.value)))
 	}
 
 	@Test
@@ -426,10 +427,10 @@ abstract class EventStoreContract {
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(null, 5, ReadDirection.FORWARD)) as GetAllEventsResponse.Success
 
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(3)))
-		Assert.assertThat(
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(3)))
+		assertThat(
 			response.events[0].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -441,9 +442,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			response.events[1].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -455,9 +456,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			response.events[2].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -469,7 +470,7 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(response.nextPosition!!.value, `is`(CoreMatchers.equalTo(response.events[2].position.value)))
+		assertThat(response.nextPosition!!.value, Is(CoreMatchers.equalTo(response.events[2].position.value)))
 	}
 
 	@Test
@@ -485,10 +486,10 @@ abstract class EventStoreContract {
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(null, 5, ReadDirection.FORWARD)) as GetAllEventsResponse.Success
 
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(2)))
-		Assert.assertThat(
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(2)))
+		assertThat(
 			response.events[0].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -500,9 +501,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			response.events[1].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate2",
@@ -538,10 +539,10 @@ abstract class EventStoreContract {
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(null, 5, ReadDirection.FORWARD, listOf("Order_aggregate1", "Invoice_aggregate2"))) as GetAllEventsResponse.Success
 
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(2)))
-		Assert.assertThat(
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(2)))
+		assertThat(
 			response.events[0].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -553,9 +554,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			response.events[1].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate2",
@@ -581,7 +582,7 @@ abstract class EventStoreContract {
 		)
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(null, 2, ReadDirection.FORWARD)) as GetAllEventsResponse.Success
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(2)))
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(2)))
 	}
 
 	@Test
@@ -597,10 +598,10 @@ abstract class EventStoreContract {
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(Position(saveResponse.sequenceIds[0]), 3, ReadDirection.FORWARD)) as GetAllEventsResponse.Success
 
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(2)))
-		Assert.assertThat(
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(2)))
+		assertThat(
 			response.events[0].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -612,9 +613,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			response.events[1].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -641,10 +642,10 @@ abstract class EventStoreContract {
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(Position(saveResponse.sequenceIds[0] - 1), 3, ReadDirection.FORWARD)) as GetAllEventsResponse.Success
 
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(1)))
-		Assert.assertThat(
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(1)))
+		assertThat(
 			response.events[0].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate2",
@@ -670,10 +671,10 @@ abstract class EventStoreContract {
 
 		val response = eventStore.getAllEvents(GetAllEventsRequest(Position(saveResponse.sequenceIds[2] + 1), 3, ReadDirection.BACKWARD)) as GetAllEventsResponse.Success
 
-		Assert.assertThat(response.events.size, CoreMatchers.`is`(CoreMatchers.equalTo(3)))
-		Assert.assertThat(
+		assertThat(response.events.size, Is(CoreMatchers.equalTo(3)))
+		assertThat(
 			response.events[0].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -685,9 +686,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			response.events[1].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -699,9 +700,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			response.events[2].payload,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					EventPayload(
 						"aggregate1",
@@ -733,8 +734,8 @@ abstract class EventStoreContract {
 		                                                      SaveOptions(version = 2)
 		) as SaveEventsResponse.SnapshotRequired
 
-		Assert.assertThat(
-			eventLimitReachedResponse.currentEvents, `is`(
+		assertThat(
+			eventLimitReachedResponse.currentEvents, Is(
 				CoreMatchers.equalTo(
 					listOf(
 						EventPayload("invoicing", "::kind::", 1L, "::user 1::", BinaryPayload("::data::")),
@@ -770,9 +771,9 @@ abstract class EventStoreContract {
 		                                                      SaveOptions(version = 2)
 		) as SaveEventsResponse.SnapshotRequired
 
-		Assert.assertThat(
+		assertThat(
 			eventLimitReachedResponse.currentEvents,
-			`is`(
+			Is(
 				CoreMatchers.equalTo(
 					listOf(
 						EventPayload(
@@ -786,9 +787,9 @@ abstract class EventStoreContract {
 				)
 			)
 		)
-		Assert.assertThat(
+		assertThat(
 			eventLimitReachedResponse.currentSnapshot,
-			`is`(CoreMatchers.equalTo(Snapshot(1, BinaryPayload("::snapshotData::"))))
+			Is(CoreMatchers.equalTo(Snapshot(1, BinaryPayload("::snapshotData::"))))
 		)
 	}
 
@@ -802,8 +803,8 @@ abstract class EventStoreContract {
 		val response = eventStore.getEventsFromStreams(GetEventsFromStreamsRequest("tenant1", "Invoice_aggregate1"))
 		when (response) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					response, `is`(
+				assertThat(
+					response, Is(
 						CoreMatchers.equalTo(
 							(
 									GetEventsResponse.Success(
@@ -845,9 +846,9 @@ abstract class EventStoreContract {
 		                                         SaveOptions("::aggregateId::", 2L)
 		) as SaveEventsResponse.Success
 
-		Assert.assertThat(
+		assertThat(
 			saveResponse.aggregate.snapshot,
-			`is`(CoreMatchers.equalTo(Snapshot(1L, BinaryPayload("::snapshotData::"))))
+			Is(CoreMatchers.equalTo(Snapshot(1L, BinaryPayload("::snapshotData::"))))
 		)
 	}
 
@@ -868,8 +869,8 @@ abstract class EventStoreContract {
 		val response = eventStore.getEventsFromStreams(GetEventsFromStreamsRequest("tenant1", "Invoice_aggregate1"))
 		when (response) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					response, `is`(
+				assertThat(
+					response, Is(
 						CoreMatchers.equalTo(
 							(
 									GetEventsResponse.Success(
@@ -937,8 +938,8 @@ abstract class EventStoreContract {
 
 		when (success) {
 			is GetEventsResponse.Success -> {
-				Assert.assertThat(
-					success, `is`(
+				assertThat(
+					success, Is(
 						CoreMatchers.equalTo(
 							(
 									GetEventsResponse.Success(

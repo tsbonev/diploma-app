@@ -27,14 +27,14 @@ class SyncEventPublisherTest {
 	fun `Handles events`() {
 		val messageBus = InMemoryMessageBus()
 		val syncEventPublisher = SyncEventPublisher(messageBus)
-		val firstEvent = EventWithBinaryPayload(MyEvent("Foo"), BinaryPayload("::payload::"))
-		val secondEvent = EventWithBinaryPayload(MyEvent("Bar"), BinaryPayload("::otherPayload::"))
+		val firstEvent = MyEvent("Foo")
+		val secondEvent = MyEvent("Bar")
 		syncEventPublisher.publish(listOf(
 			firstEvent,
 			secondEvent
 		))
 
-		assertThat(messageBus.handledEvents.toList(), Matchers.containsInAnyOrder(firstEvent.event, secondEvent.event))
+		assertThat(messageBus.handledEvents.toList(), Matchers.containsInAnyOrder(firstEvent, secondEvent))
 	}
 
 	@Test

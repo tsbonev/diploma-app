@@ -1,12 +1,13 @@
 package com.tsbonev.cqrs.core
 
+import com.google.gson.Gson
 import com.tsbonev.cqrs.core.eventstore.GetEventsFromStreamsRequest
 import com.tsbonev.cqrs.core.eventstore.GetEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.helpers.InMemoryEventPublisher
 import com.tsbonev.cqrs.core.helpers.InMemoryEventStore
-import com.tsbonev.cqrs.core.contracts.TestMessageFormat
 import com.tsbonev.cqrs.core.messagebus.Event
+import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import org.hamcrest.CoreMatchers
 import org.junit.Assert
 import org.junit.Test
@@ -15,6 +16,9 @@ import java.time.ZoneOffset
 import java.util.UUID
 import org.hamcrest.CoreMatchers.`is` as Is
 import org.junit.Assert.assertThat
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.lang.reflect.Type
 
 class SimpleIdentityAggregateRepositoryTest {
 
@@ -370,6 +374,39 @@ data class TestAggregate private constructor(var string: String, var long: Long,
 
 	fun apply(event: ChangeListEvent) {
 		list = event.newList
+	}
+}
+
+class TestMessageFormat(vararg types: Class<*>) : MessageFormat, DataModelFormat {
+	private val gson = Gson()
+	private val kindToType = mutableMapOf<String, Class<*>>()
+
+	init {
+		types.forEach {
+			kindToType[it.simpleName] = it
+		}
+	}
+
+	override fun supportsKind(kind: String): Boolean {
+		return kindToType.containsKey(kind)
+	}
+
+	@Suppress("UNCHECKED_CAST")
+	override fun <T> parse(stream: InputStream, kind: String): T {
+		val type = kindToType.getValue(kind)
+		return gson.fromJson(InputStreamReader(stream, Charsets.UTF_8), type) as T
+	}
+
+	override fun formatToBytes(value: Any): ByteArray {
+		return gson.toJson(value).toByteArray(Charsets.UTF_8)
+	}
+
+	override fun <T> parse(stream: InputStream, type: Type): T {
+		return gson.fromJson(InputStreamReader(stream, Charsets.UTF_8), type)
+	}
+
+	override fun formatToString(value: Any): String {
+		return gson.toJson(value)
 	}
 }
 

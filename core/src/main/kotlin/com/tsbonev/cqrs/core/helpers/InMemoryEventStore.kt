@@ -9,6 +9,7 @@ import com.tsbonev.cqrs.core.eventstore.GetEventsFromStreamsRequest
 import com.tsbonev.cqrs.core.eventstore.GetEventsResponse
 import com.tsbonev.cqrs.core.eventstore.IndexedEvent
 import com.tsbonev.cqrs.core.eventstore.Position
+import com.tsbonev.cqrs.core.eventstore.ReadDirection
 import com.tsbonev.cqrs.core.eventstore.RevertEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveEventsRequest
 import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
@@ -19,7 +20,7 @@ import java.util.LinkedList
 class InMemoryEventStore(private val eventsLimit: Int) : EventStore {
 	private val idToAggregate = mutableMapOf<String, MutableList<StoredAggregate>>()
 	private val stubbedResponses = LinkedList<SaveEventsResponse>()
-	public val saveEventOptions = LinkedList<SaveOptions>()
+	val saveEventOptions = LinkedList<SaveOptions>()
 
 
 	override fun saveEvents(request: SaveEventsRequest, saveOptions: SaveOptions): SaveEventsResponse {
@@ -32,9 +33,9 @@ class InMemoryEventStore(private val eventsLimit: Int) : EventStore {
 		val streamKey = streamKey(request.tenant, request.stream)
 
 		val aggregate = if (!idToAggregate.contains(streamKey)) {
-			val newAggr = StoredAggregate(request.tenant, request.aggregateType, mutableListOf(), null)
-			idToAggregate[streamKey] = mutableListOf(newAggr)
-			newAggr
+			val newAggregate = StoredAggregate(request.tenant, request.aggregateType, mutableListOf(), null)
+			idToAggregate[streamKey] = mutableListOf(newAggregate)
+			newAggregate
 		} else {
 			idToAggregate[streamKey]!!.find { it.events.find { event -> event.aggregateId == request.events[0].aggregateId} != null }!!
 		}
@@ -63,17 +64,17 @@ class InMemoryEventStore(private val eventsLimit: Int) : EventStore {
 		request.streams.forEach { stream ->
 			val streamKey = streamKey(request.tenant, stream)
 
-			idToAggregate[streamKey]?.forEach {
+			idToAggregate[streamKey]?.forEach { storedAggregate ->
 
-				val aggregateIdToEvents = it.events.groupBy { it.aggregateId }
-				aggregateIdToEvents.forEach { aggregateId, events ->
+				val aggregateIdToEvents = storedAggregate.events.groupBy { it.aggregateId }
+				aggregateIdToEvents.forEach { (_, _) ->
 
 					aggregates.add(
 						ConcreteAggregate(
-							it.aggregateType,
-							it.snapshot,
-							it.events.size.toLong() + (it.snapshot?.version ?: 0L),
-							it.events
+							storedAggregate.aggregateType,
+							storedAggregate.snapshot,
+							storedAggregate.events.size.toLong() + (storedAggregate.snapshot?.version ?: 0L),
+							storedAggregate.events
 						)
 					)
 				}
@@ -87,18 +88,47 @@ class InMemoryEventStore(private val eventsLimit: Int) : EventStore {
 		var positionId = 1L
 		val result = mutableListOf<IndexedEvent>()
 
-		idToAggregate.values.forEach { aggregates ->
-			aggregates.forEach { aggregate ->
-				aggregate.events.forEach { event ->
-					result.add(IndexedEvent(Position(positionId), aggregate.tenant, aggregate.aggregateType, positionId, event))
-					positionId++
+		if(request.streams.isNotEmpty()) {
+			idToAggregate.filterKeys { it.split(':')[1] in request.streams }
+				.values
+				.forEach { aggregates ->
+				aggregates.forEach { aggregate ->
+					if(request.readDirection == ReadDirection.BACKWARD) {
+						aggregate.events.reversed().forEach { event ->
+							result.add(IndexedEvent(Position(positionId), aggregate.tenant, aggregate.aggregateType, positionId, event))
+							positionId++
+						}
+					} else
+						aggregate.events.forEach { event ->
+						result.add(IndexedEvent(Position(positionId), aggregate.tenant, aggregate.aggregateType, positionId, event))
+						positionId++
+					}
 				}
 			}
+		} else {
+			idToAggregate.values
+				.forEach { aggregates ->
+					aggregates.forEach { aggregate ->
+						if(request.readDirection == ReadDirection.BACKWARD) {
+							aggregate.events.reversed().forEach { event ->
+								result.add(IndexedEvent(Position(positionId), aggregate.tenant, aggregate.aggregateType, positionId, event))
+								positionId++
+							}
+						} else
+							aggregate.events.forEach { event ->
+								result.add(IndexedEvent(Position(positionId), aggregate.tenant, aggregate.aggregateType, positionId, event))
+								positionId++
+							}
+					}
+				}
 		}
-		return GetAllEventsResponse.Success(result, request.readDirection, Position(positionId))
+
+		return GetAllEventsResponse.Success(result.take(request.maxCount), request.readDirection, Position(positionId))
 	}
 
 	override fun revertEvents(tenant: String, stream: String, count: Int): RevertEventsResponse {
+		if(count == 0) throw IllegalArgumentException()
+
 		val streamKey = streamKey(tenant, stream)
 
 		if (!idToAggregate.containsKey(streamKey)) {
