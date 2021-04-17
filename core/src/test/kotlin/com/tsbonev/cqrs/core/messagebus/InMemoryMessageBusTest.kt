@@ -1,22 +1,23 @@
 package com.tsbonev.cqrs.core.messagebus
 
-import com.tsbonev.cqrs.core.BinaryPayload
-import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.helpers.InMemoryMessageBus
 import com.tsbonev.nharker.cqrs.StatusCode
 import com.tsbonev.nharker.cqrs.Workflow
 import org.hamcrest.CoreMatchers
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.hamcrest.CoreMatchers.`is` as Is
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
+import org.junit.jupiter.api.assertThrows
 
 class InMemoryMessageBusTest {
 
-	@Test(expected = NoHandlersInWorkflowException::class)
+	@Test
 	fun `Handles commands when no set handler`() {
 		val messageBus = InMemoryMessageBus()
 		val command = DummyCommand()
-		messageBus.send(command)
+		assertThrows<NoHandlersInWorkflowException> {
+			messageBus.send(command)
+		}
 	}
 
 	@Test

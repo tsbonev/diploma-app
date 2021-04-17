@@ -17,18 +17,19 @@ import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveOptions
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import org.hamcrest.CoreMatchers
-import org.junit.Assert
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.UUID
 import org.hamcrest.CoreMatchers.`is` as Is
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.fail
 
 abstract class EventStoreContract {
 
 	private lateinit var eventStore: EventStore
 
-	@Before
+	@BeforeEach
 	fun setUp() {
 		eventStore = createEventStore()
 	}
@@ -73,7 +74,7 @@ abstract class EventStoreContract {
 				)
 
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 
@@ -148,7 +149,7 @@ abstract class EventStoreContract {
 					)
 				)
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 
@@ -191,7 +192,7 @@ abstract class EventStoreContract {
 				)
 
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 
@@ -214,7 +215,7 @@ abstract class EventStoreContract {
 				)
 
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 
@@ -236,7 +237,7 @@ abstract class EventStoreContract {
 			is SaveEventsResponse.EventCollision -> {
 				assertThat(saveResult.expectedVersion, Is(CoreMatchers.equalTo(1L)))
 			}
-			else -> Assert.fail("got un-expected save result: $saveResult")
+			else -> fail("got un-expected save result: $saveResult")
 		}
 	}
 
@@ -277,13 +278,15 @@ abstract class EventStoreContract {
 					)
 				)
 			}
-			else -> Assert.fail("got un-expected response '$response' when reverting saved events")
+			else -> fail("got un-expected response '$response' when reverting saved events")
 		}
 	}
 
-	@Test(expected = IllegalArgumentException::class)
+	@Test
 	fun revertZeroEventsIsNotAllowed() {
-		eventStore.revertEvents("tenant1", "Task_1", 0)
+		assertThrows<IllegalArgumentException> {
+			eventStore.revertEvents("tenant1", "Task_1", 0)
+		}
 	}
 
 	@Test
@@ -299,7 +302,7 @@ abstract class EventStoreContract {
 		when (response) {
 			is RevertEventsResponse.InsufficientEventsError -> {
 			}
-			else -> Assert.fail("got un-expected response '$response' when reverting more then available")
+			else -> fail("got un-expected response '$response' when reverting more then available")
 		}
 	}
 
@@ -350,7 +353,7 @@ abstract class EventStoreContract {
 				)
 
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 
@@ -830,7 +833,7 @@ abstract class EventStoreContract {
 					)
 				)
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 
@@ -904,7 +907,7 @@ abstract class EventStoreContract {
 				)
 
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 
@@ -966,7 +969,7 @@ abstract class EventStoreContract {
 				)
 
 			}
-			else -> Assert.fail("got unknown response when fetching stored events")
+			else -> fail("got unknown response when fetching stored events")
 		}
 	}
 

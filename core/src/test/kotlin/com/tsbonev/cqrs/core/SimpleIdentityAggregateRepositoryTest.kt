@@ -9,13 +9,14 @@ import com.tsbonev.cqrs.core.helpers.InMemoryEventStore
 import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import org.hamcrest.CoreMatchers
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 import org.hamcrest.CoreMatchers.`is` as Is
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.fail
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.lang.reflect.Type
@@ -106,7 +107,7 @@ class SimpleIdentityAggregateRepositoryTest {
 		)
 	}
 
-	@Test(expected = EventCollisionException::class)
+	@Test
 	fun `Causes event collision`() {
 		val invoice = Invoice(invoiceId(), "John")
 		val eventStore = InMemoryEventStore(5)
@@ -114,7 +115,9 @@ class SimpleIdentityAggregateRepositoryTest {
 
 		eventStore.pretendThatNextSaveWillReturn(SaveEventsResponse.EventCollision(3L))
 
-		eventRepository.save(invoice, anyIdentity)
+		assertThrows<EventCollisionException> {
+			eventRepository.save(invoice, anyIdentity)
+		}
 	}
 
 	@Test
@@ -129,7 +132,7 @@ class SimpleIdentityAggregateRepositoryTest {
 
 		try {
 			eventRepository.save("Invoice_$invoiceId", invoice, anyIdentity)
-			Assert.fail("exception wasn't re-thrown when publishing failed?")
+			fail("exception wasn't re-thrown when publishing failed?")
 		} catch (ex: PublishErrorException) {
 			val response = eventStore.getEventsFromStreams(GetEventsFromStreamsRequest(anyIdentity.tenant, "Invoice_$invoiceId")) as GetEventsResponse.Success
 			assertThat(response.aggregates.isEmpty(), Is(true))
@@ -155,14 +158,14 @@ class SimpleIdentityAggregateRepositoryTest {
 		eventPublisher.pretendThatNextPublishWillFail()
 		try {
 			eventRepository.save(invoice, anyIdentity)
-			Assert.fail("exception wasn't re-thrown when publishing failed?")
+			fail("exception wasn't re-thrown when publishing failed?")
 		} catch (ex: PublishErrorException) {
 			val response = eventStore.getEventsFromStreams(GetEventsFromStreamsRequest(anyIdentity.tenant, "Invoice_${invoice.getId()}")) as GetEventsResponse.Success
 			assertThat(response.aggregates[0].events.size, Is(1))
 		}
 	}
 
-	@Test(expected = AggregateNotFoundException::class)
+	@Test
 	fun `Retrieve uknown aggregate`() {
 		val eventRepository = SimpleIdentityAggregateRepository(
 			InMemoryEventStore(5),
@@ -171,7 +174,9 @@ class SimpleIdentityAggregateRepositoryTest {
 			configuration
 		)
 
-		eventRepository.getById("::any id::", Invoice::class.java, anyIdentity)
+		assertThrows<AggregateNotFoundException> {
+			eventRepository.getById("::any id::", Invoice::class.java, anyIdentity)
+		}
 	}
 
 	@Test

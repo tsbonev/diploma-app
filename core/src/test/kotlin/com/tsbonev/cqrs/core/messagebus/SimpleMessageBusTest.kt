@@ -1,18 +1,14 @@
 package com.tsbonev.cqrs.core.messagebus
 
-import com.tsbonev.cqrs.core.BinaryPayload
-import com.tsbonev.cqrs.core.EventWithBinaryPayload
-import com.tsbonev.cqrs.core.ValidationException
 import com.tsbonev.nharker.cqrs.StatusCode
 import com.tsbonev.nharker.cqrs.Workflow
-import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.nullValue
-import org.junit.Assert
-import org.junit.Test
 import java.util.UUID
 import org.hamcrest.CoreMatchers.`is` as Is
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 
 class SimpleMessageBusTest {
@@ -81,24 +77,28 @@ class SimpleMessageBusTest {
 		assertThat(handler.lastCommand, Is(dummyCommand))
 	}
 
-	@Test(expected = NoHandlersInWorkflowException::class)
+	@Test
 	fun `No proper handler is set`() {
 		val msgBus = SimpleMessageBus()
 
+		assertThrows<NoHandlersInWorkflowException> {
 		val dummyCommand = DummyCommand("::test::")
 		msgBus.send(dummyCommand)
+		}
 	}
 
-	@Test(expected = NoHandlersInWorkflowException::class)
+	@Test
 	fun `Handles dispatched commands by type`() {
 		val msgBus = SimpleMessageBus()
 
 		val handler = DummyWorkflow()
 		msgBus.registerWorkflow(handler)
 
-		msgBus.send(SecondDummyCommand("::test::"))
+		assertThrows<NoHandlersInWorkflowException> {
+			msgBus.send(SecondDummyCommand("::test::"))
 
-		assertThat(handler.lastCommand, Is(nullValue()))
+			assertThat(handler.lastCommand, Is(nullValue()))
+		}
 	}
 
 	@Test

@@ -1,4 +1,5 @@
 rootProject.name = 'cqrs'
 include 'core'
+include 'backend'
 
 

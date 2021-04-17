@@ -7,19 +7,19 @@ import com.tsbonev.cqrs.core.helpers.InMemoryMessageBus
 import org.hamcrest.Matchers
 import org.jmock.AbstractExpectations
 import org.jmock.Expectations
-import org.jmock.integration.junit4.JUnitRuleMockery
-import org.junit.Assert
-import org.junit.Rule
-import org.junit.Test
+import org.jmock.junit5.JUnit5Mockery
 import org.hamcrest.CoreMatchers.`is` as Is
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.api.fail
 
 
 class SyncEventPublisherTest {
 
-	@Rule
+	@RegisterExtension
 	@JvmField
-	val context = JUnitRuleMockery()
+	val context = JUnit5Mockery()
 
 	private val mockedMessageBus = context.mock(MessageBus::class.java)
 
@@ -50,7 +50,7 @@ class SyncEventPublisherTest {
 		})
 		try {
 			syncEventPublisher.publish(listOf(firstEvent))
-			Assert.fail("Exception was not thrown")
+			fail("Exception was not thrown")
 		} catch (e: PublishErrorException) {
 			assertThat(e.reason, Is(Matchers.equalTo(MyException("Some message!") as Exception)))
 		}

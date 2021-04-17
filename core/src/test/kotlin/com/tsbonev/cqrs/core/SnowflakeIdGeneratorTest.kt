@@ -1,9 +1,9 @@
 package com.tsbonev.cqrs.core
 
 import com.tsbonev.cqrs.core.contracts.IdGeneratorContract
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.hamcrest.CoreMatchers.`is` as Is
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
 
 
 class SnowflakeIdGeneratorTest : IdGeneratorContract() {
