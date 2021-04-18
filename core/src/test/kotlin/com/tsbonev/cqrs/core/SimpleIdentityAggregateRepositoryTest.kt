@@ -1,33 +1,25 @@
 package com.tsbonev.cqrs.core
 
 import com.google.gson.Gson
-import com.tsbonev.cqrs.core.eventstore.GetEventsFromStreamsRequest
-import com.tsbonev.cqrs.core.eventstore.GetEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.helpers.InMemoryEventPublisher
 import com.tsbonev.cqrs.core.helpers.InMemoryEventStore
 import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import org.hamcrest.CoreMatchers
-import org.junit.jupiter.api.Test
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.util.UUID
-import org.hamcrest.CoreMatchers.`is` as Is
 import org.hamcrest.MatcherAssert.assertThat
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.fail
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.lang.reflect.Type
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.UUID
+import org.hamcrest.CoreMatchers.`is` as Is
 
 class SimpleIdentityAggregateRepositoryTest {
-
-	private val configuration = object : AggregateConfiguration {
-		override fun topicName(aggregate: AggregateRoot): String {
-			return "::topic::"
-		}
-	}
 
 	private val messageFormat = TestMessageFormat(
 		InvoiceCreatedEvent::class.java,
@@ -37,16 +29,25 @@ class SimpleIdentityAggregateRepositoryTest {
 		ChangeStringEvent::class.java,
 		ChangeLongEvent::class.java,
 		ChangeObjectEvent::class.java,
-		ChangeListEvent::class.java
+		ChangeListEvent::class.java,
+		TestAggregate::class.java,
+		Invoice::class.java
 	)
 
-	private val anyIdentity = Identity("::user id::", "tenant1", LocalDateTime.of(2018, 4, 1, 10, 12, 34).toInstant(
-		ZoneOffset.UTC))
+	private val anyIdentity = Identity(
+		"::user id::", LocalDateTime.of(2018, 4, 1, 10, 12, 34).toInstant(
+			ZoneOffset.UTC
+		)
+	)
 
 	@Test
 	fun `Saves aggregate with identity`() {
 		val invoice = Invoice(invoiceId(), "John")
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(5), messageFormat, InMemoryEventPublisher(), configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(
+			InMemoryEventStore(5),
+			messageFormat,
+			InMemoryEventPublisher(messageFormat)
+		)
 		eventRepository.save(invoice, anyIdentity)
 
 		val loadedInvoice = eventRepository.getById(invoice.getId(), Invoice::class.java, anyIdentity)
@@ -58,7 +59,11 @@ class SimpleIdentityAggregateRepositoryTest {
 		val invoice1 = Invoice("invoice1", "John")
 		val invoice2 = Invoice("invoice1", "John")
 
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(5), messageFormat, InMemoryEventPublisher(), configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(
+			InMemoryEventStore(5),
+			messageFormat,
+			InMemoryEventPublisher(messageFormat)
+		)
 
 		eventRepository.save(invoice1, anyIdentity)
 		eventRepository.save(invoice2, anyIdentity)
@@ -68,8 +73,8 @@ class SimpleIdentityAggregateRepositoryTest {
 	fun `Applies changes and updates`() {
 		val initialInvoice = Invoice(invoiceId(), "John")
 
-		val eventPublisher = InMemoryEventPublisher()
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(5), messageFormat, eventPublisher, configuration)
+		val eventPublisher = InMemoryEventPublisher(messageFormat)
+		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(5), messageFormat, eventPublisher)
 		eventRepository.save(initialInvoice, anyIdentity)
 
 		var invoice = eventRepository.getById(initialInvoice.getId(), Invoice::class.java, anyIdentity)
@@ -86,23 +91,17 @@ class SimpleIdentityAggregateRepositoryTest {
 	@Test
 	fun `Publishes events after save`() {
 		val invoice = Invoice(invoiceId(), "John")
-		val eventPublisher = InMemoryEventPublisher()
+		val eventPublisher = InMemoryEventPublisher(messageFormat)
 		val eventRepository = SimpleIdentityAggregateRepository(
 			InMemoryEventStore(5),
 			messageFormat,
-			eventPublisher,
-			configuration
+			eventPublisher
 		)
 		eventRepository.save(invoice, anyIdentity)
 
 		assertThat(
 			eventPublisher.events, CoreMatchers.equalTo(
-				listOf(
-					EventWithBinaryPayload(
-						InvoiceCreatedEvent(invoice.getId(), "John"),
-						BinaryPayload("""{"invoiceId":"${invoice.getId()}","customerName":"John"}""")
-					)
-				)
+				listOf(InvoiceCreatedEvent(invoice.getId(), "John")),
 			)
 		)
 	}
@@ -111,9 +110,9 @@ class SimpleIdentityAggregateRepositoryTest {
 	fun `Causes event collision`() {
 		val invoice = Invoice(invoiceId(), "John")
 		val eventStore = InMemoryEventStore(5)
-		val eventRepository = SimpleIdentityAggregateRepository(eventStore, messageFormat, InMemoryEventPublisher(), configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(eventStore, messageFormat, InMemoryEventPublisher(messageFormat))
 
-		eventStore.pretendThatNextSaveWillReturn(SaveEventsResponse.EventCollision(3L))
+		eventStore.pretendThatNextSaveWillReturn(SaveEventsResponse.EventCollision(3L, 0L))
 
 		assertThrows<EventCollisionException> {
 			eventRepository.save(invoice, anyIdentity)
@@ -124,18 +123,18 @@ class SimpleIdentityAggregateRepositoryTest {
 	fun `Rolls back events`() {
 		val invoiceId = invoiceId()
 		val invoice = Invoice(invoiceId, "John")
-		val eventPublisher = InMemoryEventPublisher()
+		val eventPublisher = InMemoryEventPublisher(messageFormat)
 		val eventStore = InMemoryEventStore(5)
-		val eventRepository = SimpleIdentityAggregateRepository(eventStore, messageFormat, eventPublisher, configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(eventStore, messageFormat, eventPublisher)
 
 		eventPublisher.pretendThatNextPublishWillFail()
 
 		try {
-			eventRepository.save("Invoice_$invoiceId", invoice, anyIdentity)
+			eventRepository.save(invoice, anyIdentity)
 			fail("exception wasn't re-thrown when publishing failed?")
 		} catch (ex: PublishErrorException) {
-			val response = eventStore.getEventsFromStreams(GetEventsFromStreamsRequest(anyIdentity.tenant, "Invoice_$invoiceId")) as GetEventsResponse.Success
-			assertThat(response.aggregates.isEmpty(), Is(true))
+			val response = eventStore.getEvents(invoice.getId())
+			assertThat(response.events.events.isEmpty(), Is(true))
 		}
 	}
 
@@ -143,12 +142,11 @@ class SimpleIdentityAggregateRepositoryTest {
 	fun `Rolls back only failed events`() {
 		val invoice = Invoice(invoiceId(), "John")
 		val eventStore = InMemoryEventStore(5)
-		val eventPublisher = InMemoryEventPublisher()
+		val eventPublisher = InMemoryEventPublisher(messageFormat)
 		val eventRepository = SimpleIdentityAggregateRepository(
 			eventStore,
 			messageFormat,
-			eventPublisher,
-			configuration
+			eventPublisher
 		)
 
 		eventRepository.save(invoice, anyIdentity)
@@ -160,18 +158,17 @@ class SimpleIdentityAggregateRepositoryTest {
 			eventRepository.save(invoice, anyIdentity)
 			fail("exception wasn't re-thrown when publishing failed?")
 		} catch (ex: PublishErrorException) {
-			val response = eventStore.getEventsFromStreams(GetEventsFromStreamsRequest(anyIdentity.tenant, "Invoice_${invoice.getId()}")) as GetEventsResponse.Success
-			assertThat(response.aggregates[0].events.size, Is(1))
+			val response = eventStore.getEvents(invoice.getId())
+			assertThat(response.events.events.size, Is(1))
 		}
 	}
 
 	@Test
-	fun `Retrieve uknown aggregate`() {
+	fun `Retrieve unknown aggregate`() {
 		val eventRepository = SimpleIdentityAggregateRepository(
 			InMemoryEventStore(5),
 			messageFormat,
-			InMemoryEventPublisher(),
-			configuration
+			InMemoryEventPublisher(messageFormat)
 		)
 
 		assertThrows<AggregateNotFoundException> {
@@ -183,11 +180,19 @@ class SimpleIdentityAggregateRepositoryTest {
 	fun `Retrieve mutliple aggregates`() {
 		val firstInvoice = Invoice(invoiceId(), "John")
 		val secondInvoice = Invoice(invoiceId(), "Peter")
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(5), messageFormat, InMemoryEventPublisher(), configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(
+			InMemoryEventStore(5),
+			messageFormat,
+			InMemoryEventPublisher(messageFormat)
+		)
 		eventRepository.save(firstInvoice, anyIdentity)
 		eventRepository.save(secondInvoice, anyIdentity)
 
-		val loadedInvoices = eventRepository.getByIds(listOf(firstInvoice.getId(), secondInvoice.getId()), Invoice::class.java, anyIdentity)
+		val loadedInvoices = eventRepository.getByIds(
+			listOf(firstInvoice.getId(), secondInvoice.getId()),
+			Invoice::class.java,
+			anyIdentity
+		)
 		assertThat(
 			loadedInvoices, Is(
 				CoreMatchers.equalTo(
@@ -203,61 +208,74 @@ class SimpleIdentityAggregateRepositoryTest {
 	@Test
 	fun `Get one out of two invoices`() {
 		val firstInvoice = Invoice(invoiceId(), "John")
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(5), messageFormat, InMemoryEventPublisher(), configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(
+			InMemoryEventStore(5),
+			messageFormat,
+			InMemoryEventPublisher(messageFormat)
+		)
+
 		eventRepository.save(firstInvoice, anyIdentity)
 
-		val loadedInvoices = eventRepository.getByIds(listOf(firstInvoice.getId(), "::any unknown id::"), Invoice::class.java, anyIdentity)
-		assertThat(
-			loadedInvoices, Is(
-				CoreMatchers.equalTo(
-					mapOf(
-						firstInvoice.getId() to firstInvoice
-					)
-				)
-			)
+		val loadedInvoices = eventRepository.getByIds(
+			listOf(firstInvoice.getId(), "::any unknown id::"),
+			Invoice::class.java,
+			anyIdentity
 		)
+
+		assertThat(loadedInvoices, Is(CoreMatchers.equalTo(mapOf(firstInvoice.getId() to Invoice(firstInvoice.getId(), "John")))))
 	}
 
 	@Test
 	fun `Returns no aggregates`() {
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(5), messageFormat, InMemoryEventPublisher(), configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(
+			InMemoryEventStore(5),
+			messageFormat,
+			InMemoryEventPublisher(messageFormat)
+		)
 
-		val invoices = eventRepository.getByIds(listOf("::id 1::", "::id 2::"), Invoice::class.java, anyIdentity)
+		val invoices = eventRepository.getByIds(
+			listOf("::id 1::", "::id 2::"),
+			Invoice::class.java, anyIdentity
+		)
 		assertThat(invoices, Is(CoreMatchers.equalTo(mapOf())))
 	}
 
 	@Test
 	fun `Creates snapshot at limit`() {
-		var aggregate = TestAggregate("::id::", "::string::", 1, TestObject("::value::"), listOf(TestObject("::value2::")))
+		var aggregate = TestAggregate(
+			"::id::", "::string::", 1, TestObject("::value::"),
+			listOf(TestObject("::value2::"))
+		)
 
-		val eventPublisher = InMemoryEventPublisher()
+		val eventPublisher = InMemoryEventPublisher(messageFormat)
 		val eventStore = InMemoryEventStore(1)
-		val eventRepository = SimpleIdentityAggregateRepository(eventStore, messageFormat, eventPublisher, configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(eventStore, messageFormat, eventPublisher)
 		eventRepository.save(aggregate, anyIdentity)
-
-
-		assertThat(eventStore.saveEventOptions.last.version, Is(0L))
 
 		aggregate = eventRepository.getById(aggregate.getId(), TestAggregate::class.java, anyIdentity)
 
 		aggregate.changeLong(123)
 		eventRepository.save(aggregate, anyIdentity)
 
-		assertThat(eventStore.saveEventOptions.last.version, Is(1L))
-		assertThat(eventStore.saveEventOptions.last.createSnapshotRequest.snapshot!!.version, Is(1L))
-
 		aggregate = eventRepository.getById(aggregate.getId(), TestAggregate::class.java, anyIdentity)
 
-		assertThat(aggregate.getExpectedVersion(), Is(2L)) // after the last event
+		assertThat(aggregate.getExpectedVersion(), Is(2L))
 		assertThat(aggregate.long, CoreMatchers.equalTo(123L))
 	}
 
 	@Test
 	fun `Creates multiple snapshots`() {
-		val eventPublisher = InMemoryEventPublisher()
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(1), messageFormat, eventPublisher, configuration)
+		val eventPublisher = InMemoryEventPublisher(messageFormat)
+		val eventRepository = SimpleIdentityAggregateRepository(
+			InMemoryEventStore(1),
+			messageFormat, eventPublisher
+		)
 
-		var aggregate = TestAggregate("::id::", "::string::", 1, TestObject("::value::", Foo("bar")), listOf(TestObject("::value2::", Foo("baar"))))
+		var aggregate = TestAggregate(
+			"::id::", "::string::", 1,
+			TestObject("::value::", Foo("bar")),
+			listOf(TestObject("::value2::", Foo("baar")))
+		)
 
 		eventRepository.save(aggregate, anyIdentity)
 		aggregate = eventRepository.getById(aggregate.getId(), TestAggregate::class.java, anyIdentity)
@@ -287,7 +305,10 @@ class SimpleIdentityAggregateRepositoryTest {
 
 	@Test
 	fun `Uses default snapshot mapper`() {
-		val eventRepository = SimpleIdentityAggregateRepository(InMemoryEventStore(1), messageFormat, InMemoryEventPublisher(), configuration)
+		val eventRepository = SimpleIdentityAggregateRepository(
+			InMemoryEventStore(1), messageFormat,
+			InMemoryEventPublisher(messageFormat)
+		)
 		val id = invoiceId()
 
 		var invoice = Invoice(id, "John")
@@ -334,10 +355,18 @@ class SimpleIdentityAggregateRepositoryTest {
 
 }
 
-data class TestAggregate private constructor(var string: String, var long: Long, var testObject: TestObject, var list: List<TestObject>) : AggregateRootBase() {
+data class TestAggregate private constructor(
+	var string: String, var long: Long, var testObject: TestObject,
+	var list: List<TestObject>
+) : AggregateRootBase() {
 	constructor() : this("", 0, TestObject(), listOf())
 
-	constructor(id: String, string: String, long: Long, testObject: TestObject, list: List<TestObject>) : this(string, long, testObject, list) {
+	constructor(id: String, string: String, long: Long, testObject: TestObject, list: List<TestObject>) : this(
+		string,
+		long,
+		testObject,
+		list
+	) {
 		applyChange(TestClassCreatedEvent(id, string, long, testObject, list))
 	}
 
@@ -415,7 +444,10 @@ class TestMessageFormat(vararg types: Class<*>) : MessageFormat, DataModelFormat
 	}
 }
 
-data class TestClassCreatedEvent(val id: String, val string: String, val long: Long, val testObject: TestObject, val list: List<TestObject>) :
+data class TestClassCreatedEvent(
+	val id: String, val string: String, val long: Long, val testObject: TestObject,
+	val list: List<TestObject>
+) :
 	Event
 
 data class ChangeStringEvent(val newString: String) : Event

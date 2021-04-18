@@ -4,8 +4,7 @@ import com.tsbonev.cqrs.core.*
 import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Filters.*
-import com.mongodb.client.model.ReplaceOptions
-import com.tsbonev.cqrs.core.eventstore.ConcreteAggregate
+import com.tsbonev.cqrs.core.eventstore.Aggregate
 import com.tsbonev.cqrs.core.eventstore.EventPayload
 import com.tsbonev.cqrs.core.eventstore.EventStore
 import com.tsbonev.cqrs.core.eventstore.GetAllEventsRequest
@@ -16,11 +15,8 @@ import com.tsbonev.cqrs.core.eventstore.RevertEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveEventsRequest
 import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveOptions
-import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import org.bson.Document
-import org.bson.RawBsonDocument
-import org.bson.codecs.DocumentCodec
 import java.io.ByteArrayInputStream
 
 /**
@@ -28,7 +24,7 @@ import java.io.ByteArrayInputStream
  */
 class MongoDbEventStore(private val database: String = "db",
                         private val eventsName: String = "Events",
-                        private val messageFormat: MessageFormat,
+                        private val messageFormat: DataModelFormat,
                         private val mongoClient: MongoClient,
                         private val inTestEnvironment: Boolean = false,
                         private val documentSizeLimit: Long = 16793600L,
@@ -38,6 +34,11 @@ class MongoDbEventStore(private val database: String = "db",
 	 * Collection name used for storing of snapshots.
 	 */
 	private val snapshotsName = eventsName + "Snapshots"
+
+	/**
+	 * Collection name used for storing event indexed
+	 */
+	private val indexName = "EventIndexes"
 
 	/**
 	 * Property name for the aggregate type.
@@ -66,117 +67,152 @@ class MongoDbEventStore(private val database: String = "db",
 	private val eventsCollection: MongoCollection<Document>
 		get() = mongoClient.getDatabase(database).getCollection(eventsName)
 
-	override fun saveEvents(request: SaveEventsRequest, saveOptions: SaveOptions): SaveEventsResponse {
-		val aggregateId = saveOptions.aggregateId
+	/**
+	 * Collection to store event indexes
+	 */
+	private val indexesCollection: MongoCollection<Document>
+		get() = mongoClient.getDatabase(database).getCollection(indexName)
 
-		val sequenceIds = (1..request.events.size).map { idGenerator.nextId() }
+	override fun saveEvents(request: SaveEventsRequest, saveOptions: SaveOptions): SaveEventsResponse {
+		val version = saveOptions.version
+		val aggregateType = request.aggregateType
+		val stream = request.stream
+		var snapshot: Snapshot? = null
+
+		val aggregateId = request.stream
 
 		/**
 		 * If in a test environment, the transactions are
 		 * stubbed as bwaldvogel:mongo-java-server:1.8.0
 		 * throws an exception if one is started.
 		 */
-		val session = if(!inTestEnvironment) {
+		val session = if (!inTestEnvironment) {
 			mongoClient.startSession()
 		} else MongoClientSessionStub()
 
-		try{
+		try {
 			session.startTransaction()
 
 			val snapshotDocument = snapshotsCollection.find(eq("_id", aggregateId)).first()
 				?: Document(mapOf("_id" to aggregateId))
-
 			var aggregateIndex = snapshotDocument.get("aggregateIndex", 0L) as Long
-
-
-			if (saveOptions.createSnapshotRequest.required && saveOptions.createSnapshotRequest.snapshot != null) {
-				aggregateIndex += 1
-				val snapshotData = org.bson.types.Binary(saveOptions.createSnapshotRequest.snapshot!!.data.payload)
-
-				snapshotDocument.append("version", saveOptions.createSnapshotRequest.snapshot!!.version)
-				snapshotDocument.append("data", snapshotData)
-				snapshotDocument.append("aggregateIndex", aggregateIndex)
-			}
 
 			val aggregateKey = aggregateKey(aggregateId, aggregateIndex)
 
 			val aggregateDocument =
 				eventsCollection.find(eq("_id", aggregateKey)).first()
-					?: Document(mapOf(
-						"_id" to aggregateKey,
-						eventsProperty to mutableListOf<String>(),
-						versionProperty to 0L,
-						aggregateTypeProperty to request.aggregateType))
+					?: Document(
+						mapOf(
+							"_id" to aggregateKey,
+							eventsProperty to mutableListOf<String>(),
+							versionProperty to 0L,
+							aggregateTypeProperty to request.aggregateType
+						)
+					)
 
-			@Suppress("UNCHECKED_CAST")
-			val aggregateEvents = aggregateDocument[eventsProperty] as MutableList<ByteArray>
-			val currentVersion = aggregateDocument.getLong(versionProperty)
+			val documentVersion = aggregateDocument.getLong(versionProperty)
 
-			/**
-			 *  If the current version is different than what was hydrated during the state change then we know we
-			 *  have an event collision. This is a very simple approach and more "business knowledge" can be added
-			 *  here to handle scenarios where the versions may be different but the state change can still occur.
-			 */
-			if (currentVersion != saveOptions.version) {
-				return SaveEventsResponse.EventCollision(currentVersion)
+			if (documentVersion != saveOptions.version) {
+				throw EventCollisionException(stream, documentVersion)
 			}
 
-			val eventsModel = request.events.mapIndexed { index, it ->
-				EventModel(it.aggregateId, it.kind,
-				           currentVersion + index + 1,
-				           it.identityId, it.timestamp,
-				           it.data.payload.toString(Charsets.UTF_8)) }
+			val events = request.events.mapIndexed { index, it ->
+				EventModel(
+					it.aggregateId, it.aggregateType, documentVersion + index + 1, it.identityId, it.timestamp,
+					it.data.payload.toString(Charsets.UTF_8)
+				)
+			}
 
-			val eventsAsText = eventsModel.map { (messageFormat.formatToBytes(it)) }
+			val sequenceIds = (1..events.size).map { idGenerator.nextId() }
 
-			aggregateEvents.addAll(eventsAsText)
+			val eventIndexes = events.mapIndexed { index, eventModel ->
+				val sequenceId = sequenceIds[index]
+				mapOf(
+					"s" to sequenceId,
+					"t" to request.tenant,
+					"ai" to eventModel.aggregateId,
+					"at" to aggregateType,
+					"st" to stream,
+					"v" to eventModel.version,
+					"r" to aggregateDocument
+				)
+			}
 
-			aggregateDocument.append(eventsProperty, aggregateEvents)
-			aggregateDocument.append(versionProperty, currentVersion + request.events.size)
+			val existingModel = if(aggregateDocument.getString("payload") == null) {
+				EventsModel(listOf())
+			} else {
+				messageFormat.parse<EventsModel>(
+					ByteArrayInputStream(aggregateDocument.getString("payload")?.toByteArray(Charsets.UTF_8)),
+					EventsModel::class.java
+				)
+			}
 
-			//Current mongodb document size is 16,793,600 bytes
-			val docSize = RawBsonDocument(aggregateDocument, DocumentCodec())
-				.byteBuffer.remaining()
+			val currentVersion = documentVersion
 
-			if (docSize >= documentSizeLimit) {
+			val eventsModel = if (saveOptions.createSnapshotRequest.required && saveOptions.createSnapshotRequest.snapshot != null) {
+				val snapshotData = saveOptions.createSnapshotRequest.snapshot!!.data
+				val aggregateVersion = saveOptions.createSnapshotRequest.snapshot!!.version
+
+				snapshotDocument["version"] = aggregateVersion
+				snapshotDocument["aggregateIndex"] = aggregateIndex + 1
+				snapshotDocument["data"] = snapshotData.payload.toString(Charsets.UTF_8)
+
+				snapshotsCollection.replaceOne(eq("_id", aggregateId), snapshotDocument)
+
+				snapshot = Snapshot(aggregateIndex + 1, snapshotData)
+
+				EventsModel(events)
+			} else {
+				EventsModel(existingModel.events + events)
+			}
+
+			val payloadAsText = messageFormat.formatToString(eventsModel)
+			val sizeInBytes = payloadAsText.toByteArray(Charsets.UTF_8).size
+
+			if (sizeInBytes >= documentSizeLimit) {
+
 				var snapshot: Snapshot? = null
 				//if a build snapshot does not exist it would not have the field data filled in.
+
 				if (snapshotDocument["data"] != null) {
-					val bsonBinaryData = snapshotDocument["data", org.bson.types.Binary::class.java].data
+					val blobData = snapshotDocument["data"] as String
+
 					snapshot = Snapshot(
-						snapshotDocument.getLong("aggregateIndex") ?: 0L,
-						BinaryPayload(bsonBinaryData)
+						snapshotDocument["version"] as Long,
+						BinaryPayload(blobData.toByteArray(Charsets.UTF_8))
 					)
 				}
-				aggregateEvents.removeAll(eventsAsText)
-				return SaveEventsResponse.SnapshotRequired(adaptEvents(aggregateEvents), snapshot, currentVersion)
+
+				val newVersion = currentVersion + events.size
+				aggregateDocument["version"] = newVersion
+				aggregateDocument["payload"] = payloadAsText
+				aggregateDocument["stream"] = stream
+				aggregateDocument["aggregateType"] = aggregateType
+
+				eventIndexes.forEach {
+					val indexedVersion = it["v"]
+					val indexDocument = indexesCollection.replaceOne(eq("_id", "stream_indexes/${request.tenant}_${stream}_${aggregateIndex}_$indexedVersion"),
+					Document(mapOf("_id" to it)))
+				}
+
+				return SaveEventsResponse.SnapshotRequired(adaptEvents(existingModel.events), snapshot, version)
 			}
 
-			eventsCollection.replaceOne(eq("_id", aggregateKey), aggregateDocument, ReplaceOptions().upsert(true))
-			snapshotsCollection.replaceOne(eq("_id", aggregateId), snapshotDocument, ReplaceOptions().upsert(true))
-
-			session.commitTransaction()
-			return SaveEventsResponse.Success(currentVersion, sequenceIds, ConcreteAggregate(request.aggregateType,
-			                                                                                 saveOptions.createSnapshotRequest.snapshot,
-			                                                                                 saveOptions.version,
-			                                                                                 request.events))
-		}catch (ex: Exception){
+		} catch (ex: Exception) {
 			return SaveEventsResponse.Error("could not save events due: ${ex.message}")
-		}finally {
-			if(session.hasActiveTransaction()) session.abortTransaction()
+		} finally {
+			if (session.hasActiveTransaction()) session.abortTransaction()
 			session.close()
 		}
-	}
 
-	override fun getAllEvents(request: GetAllEventsRequest): GetAllEventsResponse {
-		TODO("Not yet implemented")
+		return SaveEventsResponse.Success(1L, listOf(), Aggregate("a", snapshot, 1L, listOf()))
 	}
 
 	override fun getEventsFromStreams(request: GetEventsFromStreamsRequest): GetEventsResponse {
 		val snapshotDocuments = mutableMapOf<String, Document>()
-		request.streams.forEach{
+		request.streams.forEach {
 			val snapshot = snapshotsCollection.find(eq("_id", it)).first()
-			if(snapshot != null)
+			if (snapshot != null)
 				snapshotDocuments[it] = snapshot
 		}
 
@@ -189,36 +225,42 @@ class MongoDbEventStore(private val database: String = "db",
 		}
 
 		val aggregateDocuments = mutableMapOf<String, Document>()
-		aggregateKeys.forEach{
+		aggregateKeys.forEach {
 			aggregateDocuments[it] = eventsCollection.find(eq("_id", it)).first()!!
 		}
 
-		val aggregates = mutableListOf<ConcreteAggregate>()
+		val aggregates = mutableListOf<Aggregate>()
 
-		aggregateDocuments.keys.forEach{
+		aggregateDocuments.keys.forEach {
 			val aggregateDocument = aggregateDocuments[it]
 			var snapshot: Snapshot? = null
 
-			if(snapshotDocuments.containsKey(it)){
+			if (snapshotDocuments.containsKey(it)) {
 				val thisSnapshot = snapshotDocuments[it]!!
 				val version = thisSnapshot.getLong("aggregateIndex") ?: 0L
 				if (thisSnapshot["data"] != null) {
 					val data = (thisSnapshot["data"] as org.bson.types.Binary).data
 					snapshot = Snapshot(
 						version,
-						BinaryPayload(data))
+						BinaryPayload(data)
+					)
 				}
 			}
 
 			val aggregateEvents = aggregateDocument!![eventsProperty] as List<*>
 			val currentVersion = aggregateDocument.getLong(versionProperty)
 			val aggregateType = aggregateDocument.getString(aggregateTypeProperty)
-			val events = adaptEvents(aggregateEvents.filterIsInstance(String::class.java).map { it.toByteArray() })
+			val events = adaptEventsFromByteArrays(
+				aggregateEvents.filterIsInstance(String::class.java).map { it.toByteArray() })
 
-			aggregates.add(ConcreteAggregate(aggregateType, snapshot, currentVersion, events))
+			aggregates.add(Aggregate(aggregateType, snapshot, currentVersion, events))
 		}
 
 		return GetEventsResponse.Success(aggregates)
+	}
+
+	override fun getAllEvents(request: GetAllEventsRequest): GetAllEventsResponse {
+		TODO("Not yet implemented")
 	}
 
 	override fun revertEvents(tenant: String, stream: String, count: Int): RevertEventsResponse {
@@ -226,7 +268,7 @@ class MongoDbEventStore(private val database: String = "db",
 			throw IllegalArgumentException("trying to revert zero events")
 		}
 
-		val session = if(!inTestEnvironment) {
+		val session = if (!inTestEnvironment) {
 			mongoClient.startSession()
 		} else MongoClientSessionStub()
 
@@ -260,22 +302,47 @@ class MongoDbEventStore(private val database: String = "db",
 			snapshotsCollection.replaceOne(eq("_id", tenant), snapshotDocument)
 
 			session.commitTransaction()
-		}catch (ex: Exception){
+		} catch (ex: Exception) {
 			return RevertEventsResponse.Error("could not save events due: ${ex.message}")
-		}finally {
-			if(session.hasActiveTransaction()) session.abortTransaction()
+		} finally {
+			if (session.hasActiveTransaction()) session.abortTransaction()
 			session.close()
 		}
 
 		return RevertEventsResponse.Success(listOf())
 	}
 
-	private fun adaptEvents(aggregateEvents: List<ByteArray>): List<EventPayload> {
+	private fun adaptEventsFromByteArrays(aggregateEvents: List<ByteArray>): List<EventPayload> {
 		return aggregateEvents.map {
-			messageFormat.parse<EventModel>(ByteArrayInputStream(it), EventModel::class.java.simpleName)
-		}.map { EventPayload(it.aggregateId, it.kind, it.timestamp, it.identityId, BinaryPayload(it.payload.toByteArray(Charsets.UTF_8))) }
+			messageFormat.parse<EventModel>(
+				ByteArrayInputStream(it),
+				EventsModel::class.java
+			)
+		}
+			.map {
+				EventPayload(
+					it.aggregateId,
+					it.kind,
+					it.timestamp,
+					it.identityId,
+					BinaryPayload(it.payload.toByteArray(Charsets.UTF_8))
+				)
+			}
 	}
 
-	private fun aggregateKey(aggregateId: String, aggregateIndex: Long) =
-		"${aggregateId}_$aggregateIndex"
+	private fun adaptEvents(aggregateEvents: List<EventModel>): List<EventPayload> {
+		return aggregateEvents.map {
+			EventPayload(
+				it.aggregateId,
+				it.kind,
+				it.timestamp,
+				it.identityId,
+				BinaryPayload(it.payload.toByteArray(Charsets.UTF_8))
+			)
+		}
+	}
+
+	private fun aggregateKey(aggregateId: String, aggregateIndex: Long): String {
+		return "${aggregateId}_$aggregateIndex"
+	}
 }

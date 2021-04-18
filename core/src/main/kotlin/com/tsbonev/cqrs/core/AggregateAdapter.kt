@@ -15,8 +15,4 @@ class AggregateAdapter<T : AggregateRoot>(private val applyCallName: String) {
 			}
 		}
 	}
-
-	fun eventType(eventName: String): String? {
-		return supportedEventNameToType[eventName]
-	}
 }

@@ -9,6 +9,4 @@ class EventCollisionException(aggregateId: String, val version: Long) : RuntimeE
 
 class PublishErrorException(val reason: Exception = Exception()) : RuntimeException()
 
-class ValidationException(val errors: Map<String, List<String>>) : RuntimeException()
-
 class HydrationException(val aggregateId: String, override val message: String) : RuntimeException(message)

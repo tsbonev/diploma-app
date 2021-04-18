@@ -5,5 +5,5 @@ import com.tsbonev.cqrs.core.messagebus.Event
 
 interface EventPublisher {
 	@Throws(PublishErrorException::class)
-	fun publish(events: Iterable<Event>)
+	fun publish(events: Iterable<EventWithContext>)
 }

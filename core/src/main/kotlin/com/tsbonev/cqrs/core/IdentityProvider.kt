@@ -13,7 +13,7 @@ interface IdentityProvider {
 
 	class Default : IdentityProvider {
 		override fun get(): Identity {
-			return Identity("-1", "default", Instant.now())
+			return Identity("-1", Instant.now())
 		}
 	}
 }

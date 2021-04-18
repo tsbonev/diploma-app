@@ -8,3 +8,14 @@ data class EventModel(
 	@JvmField val timestamp: Long,
 	@JvmField val payload: String
 )
+
+data class EventsModel(@JvmField val events: List<EventModel>) {
+	/**
+	 * Removes last N events from list.
+	 */
+	fun removeLastN(count: Int): EventsModel {
+		val lastEventIndex = events.size - count
+		val updatedEvents = events.filterIndexed { index, _ -> index < lastEventIndex }
+		return EventsModel(updatedEvents)
+	}
+}

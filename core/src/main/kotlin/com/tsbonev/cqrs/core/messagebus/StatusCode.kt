@@ -1,4 +1,4 @@
-package com.tsbonev.nharker.cqrs
+package com.tsbonev.cqrs.core.messagebus
 
 /**
  * Http status codes taken from ktor's status code class to

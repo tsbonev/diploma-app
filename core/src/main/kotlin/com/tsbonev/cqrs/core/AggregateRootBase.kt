@@ -9,11 +9,13 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 
 
-abstract class AggregateRootBase private constructor(protected var aggregateId: String = "",
-                                                     protected var version: Long = 0L): AggregateRoot {
+abstract class AggregateRootBase private constructor(
+	protected var aggregateId: String = "",
+	protected var version: Long = -1L
+) : AggregateRoot {
 	private val mutations: ArrayList<Event> = arrayListOf();
 
-	constructor(): this("")
+	constructor() : this("")
 
 	override fun getId(): String {
 		return aggregateId
@@ -39,6 +41,8 @@ abstract class AggregateRootBase private constructor(protected var aggregateId: 
 	}
 
 	protected fun applyChange(event: Event, isNew: Boolean = true) {
+		if(isNew) version++
+
 		var method: Method? = null
 
 		try {
@@ -78,7 +82,10 @@ abstract class AggregateRootBase private constructor(protected var aggregateId: 
 				snapshotVersion: Long,
 				messageFormat: MessageFormat
 			): AggregateRoot {
-				return messageFormat.parse(ByteArrayInputStream(snapshot), this@AggregateRootBase::class.java.simpleName)
+				return messageFormat.parse(
+					ByteArrayInputStream(snapshot),
+					this@AggregateRootBase::class.java.simpleName
+				)
 			}
 		}
 	}
@@ -89,9 +96,11 @@ abstract class AggregateRootBase private constructor(protected var aggregateId: 
 		snapshotVersion: Long,
 		messageFormat: MessageFormat
 	): T {
-		val snapshotRootBase = getSnapshotMapper().fromSnapshot(snapshotData,
-		                                                        snapshotVersion,
-		                                                        messageFormat) as AggregateRootBase
+		val snapshotRootBase = getSnapshotMapper().fromSnapshot(
+			snapshotData,
+			snapshotVersion,
+			messageFormat
+		) as AggregateRootBase
 		snapshotRootBase.version = snapshotVersion
 		return snapshotRootBase as T
 	}

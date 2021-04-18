@@ -1,6 +1,5 @@
 package com.tsbonev.cqrs.core.messagebus
 
-import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.nharker.cqrs.Workflow
 import java.lang.reflect.Method
 

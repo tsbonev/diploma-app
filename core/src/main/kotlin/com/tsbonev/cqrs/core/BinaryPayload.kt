@@ -2,7 +2,6 @@ package com.tsbonev.cqrs.core
 
 
 data class BinaryPayload(val payload: ByteArray) {
-
 	constructor(payload: String) : this(payload.toByteArray(Charsets.UTF_8))
 
 	override fun equals(other: Any?): Boolean {
@@ -18,9 +17,5 @@ data class BinaryPayload(val payload: ByteArray) {
 
 	override fun hashCode(): Int {
 		return payload.contentHashCode()
-	}
-
-	override fun toString(): String {
-		return "BinaryPayload(payload=${payload.toString(Charsets.UTF_8)})"
 	}
 }

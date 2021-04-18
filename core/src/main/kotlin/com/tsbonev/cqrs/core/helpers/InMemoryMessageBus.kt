@@ -1,6 +1,5 @@
 package com.tsbonev.cqrs.core.helpers
 
-import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.messagebus.Command
 import com.tsbonev.cqrs.core.messagebus.CommandResponse
 import com.tsbonev.cqrs.core.messagebus.Event

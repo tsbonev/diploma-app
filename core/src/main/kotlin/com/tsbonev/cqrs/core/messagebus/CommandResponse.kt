@@ -1,6 +1,5 @@
 package com.tsbonev.cqrs.core.messagebus
 
-import com.tsbonev.nharker.cqrs.StatusCode
 import java.util.Optional
 
 typealias QueryResponse = CommandResponse
