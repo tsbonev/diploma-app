@@ -19,7 +19,6 @@ class InMemoryEventStore(private val eventsLimit: Int) : EventStore {
 
 	val saveEventOptions = LinkedList<SaveOptions>()
 
-
 	fun pretendThatNextSaveWillReturn(response: SaveEventsResponse) {
 		stubbedResponses.add(response)
 	}
@@ -42,16 +41,21 @@ class InMemoryEventStore(private val eventsLimit: Int) : EventStore {
 			listOf()
 		)
 
-		val newEvents = currentEvents.events.plus(events.events)
+		val newEvents = currentEvents.events.plus(events.events).mapIndexed { index, eventWithContext ->
+			eventWithContext.copy(version = index.toLong())
+		}
 
 
 		if (currentSnapshot == null && newEvents.size - (currentSnapshot?.version ?: 0L) >= eventsLimit) {
 			return SaveEventsResponse.SnapshotRequired(events, currentSnapshot)
 		}
 
-		aggregatesMap[aggregateIdentity.aggregateId] = currentAggregate.copy(aggregateVersion = events.finalVersion)
+		val eventsFinalVersion = newEvents.size.toLong()
+
+		aggregatesMap[aggregateIdentity.aggregateId] = currentAggregate.copy(aggregateVersion = eventsFinalVersion)
+
 		eventsMap[aggregateIdentity.aggregateId] = currentEvents.copy(
-			finalVersion = events.finalVersion,
+			finalVersion = eventsFinalVersion,
 			events = newEvents
 		)
 
@@ -64,7 +68,7 @@ class InMemoryEventStore(private val eventsLimit: Int) : EventStore {
 				aggregateIdentity.copy(),
 				Events(
 					events.aggregateId,
-					events.finalVersion,
+					eventsFinalVersion,
 					events.events
 				),
 				saveOptions.snapshot

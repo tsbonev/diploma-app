@@ -9,7 +9,7 @@ import java.io.ByteArrayInputStream
 
 class InMemoryEventPublisher(private val messageFormat: MessageFormat) : EventPublisher {
 	var events = mutableListOf<Event>()
-	var nextPublishFailsWithError = false
+	private var nextPublishFailsWithError = false
 
 	fun pretendThatNextPublishWillFail() {
 		nextPublishFailsWithError = true

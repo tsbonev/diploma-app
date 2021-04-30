@@ -6,7 +6,7 @@ import com.tsbonev.cqrs.core.helpers.InMemoryEventPublisher
 import com.tsbonev.cqrs.core.helpers.InMemoryEventStore
 import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
-import org.hamcrest.CoreMatchers
+import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -51,7 +51,7 @@ class SimpleIdentityAggregateRepositoryTest {
 		eventRepository.save(invoice, anyIdentity)
 
 		val loadedInvoice = eventRepository.getById(invoice.getId(), Invoice::class.java, anyIdentity)
-		assertThat(loadedInvoice.customerName, CoreMatchers.equalTo("John"))
+		assertThat(loadedInvoice.customerName, equalTo("John"))
 	}
 
 	@Test
@@ -84,8 +84,8 @@ class SimpleIdentityAggregateRepositoryTest {
 
 		invoice = eventRepository.getById(invoice.getId(), Invoice::class.java, anyIdentity)
 
-		assertThat(invoice.customerName, CoreMatchers.equalTo("Peter"))
-		assertThat(eventPublisher.events.size, CoreMatchers.equalTo(2))
+		assertThat(invoice.customerName, equalTo("Peter"))
+		assertThat(eventPublisher.events.size, equalTo(2))
 	}
 
 	@Test
@@ -100,7 +100,7 @@ class SimpleIdentityAggregateRepositoryTest {
 		eventRepository.save(invoice, anyIdentity)
 
 		assertThat(
-			eventPublisher.events, CoreMatchers.equalTo(
+			eventPublisher.events, equalTo(
 				listOf(InvoiceCreatedEvent(invoice.getId(), "John")),
 			)
 		)
@@ -195,7 +195,7 @@ class SimpleIdentityAggregateRepositoryTest {
 		)
 		assertThat(
 			loadedInvoices, Is(
-				CoreMatchers.equalTo(
+				equalTo(
 					mapOf(
 						firstInvoice.getId() to firstInvoice,
 						secondInvoice.getId() to secondInvoice
@@ -222,7 +222,7 @@ class SimpleIdentityAggregateRepositoryTest {
 			anyIdentity
 		)
 
-		assertThat(loadedInvoices, Is(CoreMatchers.equalTo(mapOf(firstInvoice.getId() to Invoice(firstInvoice.getId(), "John")))))
+		assertThat(loadedInvoices, Is(equalTo(mapOf(firstInvoice.getId() to Invoice(firstInvoice.getId(), "John")))))
 	}
 
 	@Test
@@ -237,7 +237,7 @@ class SimpleIdentityAggregateRepositoryTest {
 			listOf("::id 1::", "::id 2::"),
 			Invoice::class.java, anyIdentity
 		)
-		assertThat(invoices, Is(CoreMatchers.equalTo(mapOf())))
+		assertThat(invoices, Is(equalTo(mapOf())))
 	}
 
 	@Test
@@ -260,7 +260,7 @@ class SimpleIdentityAggregateRepositoryTest {
 		aggregate = eventRepository.getById(aggregate.getId(), TestAggregate::class.java, anyIdentity)
 
 		assertThat(aggregate.getExpectedVersion(), Is(2L))
-		assertThat(aggregate.long, CoreMatchers.equalTo(123L))
+		assertThat(aggregate.long, equalTo(123L))
 	}
 
 	@Test
@@ -297,10 +297,11 @@ class SimpleIdentityAggregateRepositoryTest {
 
 		aggregate = eventRepository.getById(aggregate.getId(), TestAggregate::class.java, anyIdentity)
 
-		assertThat(aggregate.long, CoreMatchers.equalTo(123L))
-		assertThat(aggregate.string, CoreMatchers.equalTo("newString"))
-		assertThat(aggregate.testObject, CoreMatchers.equalTo(TestObject("otherValue", Foo("FooBar"))))
-		assertThat(aggregate.list[0], CoreMatchers.equalTo(TestObject("otherValueInList", Foo("BarFoo"))))
+		assertThat(aggregate.getExpectedVersion(), equalTo(5L))
+		assertThat(aggregate.long, equalTo(123L))
+		assertThat(aggregate.string, equalTo("newString"))
+		assertThat(aggregate.testObject, equalTo(TestObject("otherValue", Foo("FooBar"))))
+		assertThat(aggregate.list[0], equalTo(TestObject("otherValueInList", Foo("BarFoo"))))
 	}
 
 	@Test
@@ -322,7 +323,7 @@ class SimpleIdentityAggregateRepositoryTest {
 		eventRepository.save(invoice, anyIdentity)
 		invoice = eventRepository.getById(id, Invoice::class.java, anyIdentity)
 
-		assertThat(invoice.customerName, Is(CoreMatchers.equalTo("Foo")))
+		assertThat(invoice.customerName, Is(equalTo("Foo")))
 	}
 
 	private fun invoiceId() = UUID.randomUUID().toString()
@@ -447,8 +448,7 @@ class TestMessageFormat(vararg types: Class<*>) : MessageFormat, DataModelFormat
 data class TestClassCreatedEvent(
 	val id: String, val string: String, val long: Long, val testObject: TestObject,
 	val list: List<TestObject>
-) :
-	Event
+) : Event
 
 data class ChangeStringEvent(val newString: String) : Event
 

@@ -13,7 +13,7 @@ abstract class AggregateRootBase private constructor(
 	protected var aggregateId: String = "",
 	protected var version: Long = -1L
 ) : AggregateRoot {
-	private val mutations: ArrayList<Event> = arrayListOf();
+	private val events: ArrayList<Event> = arrayListOf();
 
 	constructor() : this("")
 
@@ -22,11 +22,11 @@ abstract class AggregateRootBase private constructor(
 	}
 
 	override fun commitEvents() {
-		mutations.clear()
+		events.clear()
 	}
 
 	override fun getEvents(): List<Event> {
-		return mutations
+		return events
 	}
 
 	override fun getExpectedVersion(): Long {
@@ -41,7 +41,7 @@ abstract class AggregateRootBase private constructor(
 	}
 
 	protected fun applyChange(event: Event, isNew: Boolean = true) {
-		if(isNew) version++
+		if(isNew) { version++ }
 
 		var method: Method? = null
 
@@ -67,7 +67,7 @@ abstract class AggregateRootBase private constructor(
 		}
 
 		if (isNew) {
-			mutations.add(event)
+			events.add(event)
 		}
 	}
 

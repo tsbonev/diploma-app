@@ -34,7 +34,7 @@ class SimpleIdentityAggregateRepository(
 	override fun <T : AggregateRoot> getById(aggregateId: String, type: Class<T>, identity: Identity): T {
 		val response = eventStore.getEvents(aggregateId)
 
-		if (response.aggregateIdentity.aggregateVersion == 0L) throw AggregateNotFoundException(aggregateId)
+		if (response.aggregateIdentity.aggregateVersion == -1L) throw AggregateNotFoundException(aggregateId)
 
 		return buildAggregateFromHistory(
 			aggregateId,
@@ -71,13 +71,11 @@ class SimpleIdentityAggregateRepository(
 
 		val initialVersion = aggregate.getExpectedVersion()
 
-		var eventVersion = initialVersion
-
 		val events = uncommittedEvents.map {
 			EventWithContext(
 				messageFormat.formatToBytes(it),
 				it::class.java.simpleName,
-				eventVersion++,
+				0L,
 				CreationContext(User(identity.id), identity.time)
 			)
 		}
@@ -89,9 +87,11 @@ class SimpleIdentityAggregateRepository(
 
 		val aggregateClass = aggregate::class.java
 
+		val finalVersion = (if(initialVersion == 0L) -1L else initialVersion) + (events.size - 1)
+
 		val response = eventStore.saveEvents(
 			AggregateIdentity(aggregateId, aggregateClass.simpleName, initialVersion),
-			Events(aggregateId, eventVersion, events),
+			Events(aggregateId, finalVersion, events),
 			SaveOptions(null)
 		)
 
@@ -122,7 +122,7 @@ class SimpleIdentityAggregateRepository(
 				val newSnapshot = currentAggregate.getSnapshotMapper().toSnapshot(currentAggregate, messageFormat)
 				val createSnapshotResponse = eventStore.saveEvents(
 					AggregateIdentity(aggregateId, aggregateClass.simpleName, initialVersion),
-					Events(aggregateId, eventVersion, events),
+					Events(aggregateId, finalVersion, events),
 					SaveOptions(newSnapshot)
 				)
 
