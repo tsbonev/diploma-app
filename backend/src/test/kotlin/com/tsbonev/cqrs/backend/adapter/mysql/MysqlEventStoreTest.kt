@@ -1,19 +1,25 @@
 package com.tsbonev.cqrs.backend.adapter.mysql
 
+import com.tsbonev.cqrs.core.AggregateNotFoundException
+import com.tsbonev.cqrs.core.BinaryPayload
 import com.tsbonev.cqrs.core.eventstore.AggregateIdentity
 import com.tsbonev.cqrs.core.eventstore.CreationContext
 import com.tsbonev.cqrs.core.eventstore.EventSourcedAggregate
 import com.tsbonev.cqrs.core.eventstore.EventStore
 import com.tsbonev.cqrs.core.eventstore.EventWithContext
 import com.tsbonev.cqrs.core.eventstore.Events
+import com.tsbonev.cqrs.core.eventstore.RevertEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveEventsResponse
 import com.tsbonev.cqrs.core.eventstore.SaveOptions
 import com.tsbonev.cqrs.core.messagebus.Event
+import com.tsbonev.cqrs.core.snapshot.Snapshot
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
+import org.springframework.context.annotation.ComponentScan
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.hamcrest.CoreMatchers.`is` as Is
@@ -359,6 +365,207 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 		)
 	}
 
+	@Test
+	fun `Get aggregate with snapshot`() {
+		repo.saveEvents(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+			Events(
+				"::aggregateId::", 0L, listOf(
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+				)
+			),
+			SaveOptions(Snapshot(0L, BinaryPayload("::stub::")))
+		) as SaveEventsResponse.Success
+
+		val response = repo.getEvents("::aggregateId::")
+
+		assertThat(
+			response, Is(
+				EventSourcedAggregate(
+					AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+					Events(
+						"::aggregateId::", 0L, listOf(
+							EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+						)
+					),
+					Snapshot(0L, BinaryPayload("::stub::"))
+				)
+			)
+		)
+	}
+
+	@Test
+	fun `Revert when no aggregate found`() {
+		val response = repo.revertToVersion(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+		)
+
+		assertThat(
+			response,
+			Is(RevertEventsResponse.AggregateNotFound(AggregateIdentity("::aggregateId::", "TestAggregate", 0L)))
+		)
+	}
+
+	@Test
+	fun `Revert the only event of an aggregate does not delete it`() {
+		repo.saveEvents(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+			Events(
+				"::aggregateId::", 0L, listOf(
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+				)
+			),
+			SaveOptions()
+		) as SaveEventsResponse.Success
+
+		val response = repo.revertToVersion(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+		)
+
+		val aggregateResponse = repo.getEvents("::aggregateId::")
+
+		assertThat(response, Is(RevertEventsResponse.Success(listOf())))
+
+		assertThat(aggregateResponse, Is(
+			EventSourcedAggregate(
+				AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+				Events(
+					"::aggregateId::", 0L, listOf(
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext())
+					)
+				)
+			)))
+	}
+
+	@Test
+	fun `Revert last few events of an aggregate`() {
+		repo.saveEvents(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 2L),
+			Events(
+				"::aggregateId::", 2L, listOf(
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
+				)
+			),
+			SaveOptions()
+		) as SaveEventsResponse.Success
+
+		val response = repo.revertToVersion(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+		)
+
+		val aggregateResponse = repo.getEvents("::aggregateId::")
+
+		assertThat(
+			response,
+			Is(
+				RevertEventsResponse.Success(
+					listOf(
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
+					)
+				)
+			)
+		)
+
+		assertThat(aggregateResponse, Is(
+			EventSourcedAggregate(
+				AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+				Events(
+					"::aggregateId::", 0L, listOf(
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext())
+					)
+				)
+		)))
+	}
+
+	@Test
+	fun `Removes snapshot when events reverted before it`() {
+		repo.saveEvents(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 2L),
+			Events(
+				"::aggregateId::", 2L, listOf(
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
+				)
+			),
+			SaveOptions(Snapshot(1L, BinaryPayload("::stub::")))
+		) as SaveEventsResponse.Success
+
+		val response = repo.revertToVersion(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+		)
+
+		val aggregateResponse = repo.getEvents("::aggregateId::")
+
+		assertThat(
+			response,
+			Is(
+				RevertEventsResponse.Success(
+					listOf(
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
+					)
+				)
+			)
+		)
+
+		assertThat(aggregateResponse, Is(
+			EventSourcedAggregate(
+				AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
+				Events(
+					"::aggregateId::", 0L, listOf(
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext())
+					)
+				)
+			)))
+	}
+
+	@Test
+	fun `Keeps snapshot when revers is after it`() {
+		repo.saveEvents(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 2L),
+			Events(
+				"::aggregateId::", 2L, listOf(
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
+				)
+			),
+			SaveOptions(Snapshot(1L, BinaryPayload("::stub::")))
+		) as SaveEventsResponse.Success
+
+		val response = repo.revertToVersion(
+			AggregateIdentity("::aggregateId::", "TestAggregate", 1L),
+		)
+
+		val aggregateResponse = repo.getEvents("::aggregateId::")
+
+		assertThat(
+			response,
+			Is(
+				RevertEventsResponse.Success(
+					listOf(
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
+					)
+				)
+			)
+		)
+
+		assertThat(aggregateResponse, Is(
+			EventSourcedAggregate(
+				AggregateIdentity("::aggregateId::", "TestAggregate", 1L),
+				Events(
+					"::aggregateId::", 1L, listOf(
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext())
+					)
+				),
+				Snapshot(1L, BinaryPayload("::stub::"))
+			)))
+	}
 
 	data class StubEvent(val stubData: String = "::stub::") : Event
 }

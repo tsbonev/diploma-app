@@ -55,21 +55,6 @@ class SimpleIdentityAggregateRepositoryTest {
 	}
 
 	@Test
-	fun `Retrieves event streams`() {
-		val invoice1 = Invoice("invoice1", "John")
-		val invoice2 = Invoice("invoice1", "John")
-
-		val eventRepository = SimpleIdentityAggregateRepository(
-			InMemoryEventStore(5),
-			messageFormat,
-			InMemoryEventPublisher(messageFormat)
-		)
-
-		eventRepository.save(invoice1, anyIdentity)
-		eventRepository.save(invoice2, anyIdentity)
-	}
-
-	@Test
 	fun `Applies changes and updates`() {
 		val initialInvoice = Invoice(invoiceId(), "John")
 
@@ -177,7 +162,7 @@ class SimpleIdentityAggregateRepositoryTest {
 	}
 
 	@Test
-	fun `Retrieve mutliple aggregates`() {
+	fun `Retrieves multiple aggregates`() {
 		val firstInvoice = Invoice(invoiceId(), "John")
 		val secondInvoice = Invoice(invoiceId(), "Peter")
 		val eventRepository = SimpleIdentityAggregateRepository(

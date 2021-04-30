@@ -33,7 +33,7 @@ class MysqlEventStore(
 			)
 
 		// Overlapping versions
-		if(currentAggregate.aggregateIdentity.aggregateVersion != 0L
+		if (currentAggregate.aggregateIdentity.aggregateVersion != 0L
 			&& currentAggregate.events.finalVersion >= events.finalVersion) {
 			return SaveEventsResponse.EventCollision(currentAggregate.events.finalVersion + 1, events.finalVersion)
 		}
@@ -42,7 +42,7 @@ class MysqlEventStore(
 		val firstEventVersion = events.events.minByOrNull { it.version }?.version ?: -1L
 
 		// Missing versions
-		if(firstEventVersion != 0L && expectedFirstEventVersion != firstEventVersion) {
+		if (firstEventVersion != 0L && expectedFirstEventVersion != firstEventVersion) {
 			println("Collision for $expectedFirstEventVersion expected but is $firstEventVersion")
 			return SaveEventsResponse.EventCollision(expectedFirstEventVersion, firstEventVersion)
 		}
@@ -113,7 +113,7 @@ class MysqlEventStore(
 		val aggregateEntity = aggregateRepository.findById(aggregateIdentity.aggregateId)
 
 		val aggregate = if (aggregateEntity.isPresent) aggregateEntity.get().toEventSourcedAggregate()
-		else throw AggregateNotFoundException(aggregateIdentity.aggregateId)
+		else return RevertEventsResponse.AggregateNotFound(aggregateIdentity)
 
 		val snapshot = aggregate.snapshot
 
@@ -127,23 +127,34 @@ class MysqlEventStore(
 				aggregateIdentity.aggregateVersion
 			)
 		} else {
-			if (aggregate.aggregateIdentity.aggregateVersion < aggregateIdentity.aggregateVersion) return RevertEventsResponse.CannotRevertEventForward(
-				aggregate.events.finalVersion,
-				aggregateIdentity.aggregateVersion
-			)
+			if (aggregate.aggregateIdentity.aggregateVersion < aggregateIdentity.aggregateVersion) {
+				return RevertEventsResponse.CannotRevertEventForward(
+					aggregate.events.finalVersion,
+					aggregateIdentity.aggregateVersion
+				)
+			}
 
 			val eventsToBeReverted = aggregate.events.events.filter { it.version > aggregateIdentity.aggregateVersion }
 
 			val revertedEvents = aggregate.events.copy(finalVersion = aggregateIdentity.aggregateVersion,
-			                                 events = aggregate.events.events.filter {
-				                                 it.version <= aggregateIdentity.aggregateVersion
-			                                 })
+			                                           events = aggregate.events.events.filter {
+				                                           it.version <= aggregateIdentity.aggregateVersion
+			                                           })
 
-			val updatedEvents = aggregate.copy(events = revertedEvents,
-			                                   aggregateIdentity = aggregate.aggregateIdentity.copy(aggregateVersion = aggregateIdentity.aggregateVersion))
+			val updatedEvents = aggregate.copy(
+				events = revertedEvents,
+				aggregateIdentity = aggregate.aggregateIdentity.copy(aggregateVersion = aggregateIdentity.aggregateVersion),
+				snapshot = if(snapshot != null && snapshot.version > aggregateIdentity.aggregateVersion) null else aggregate.snapshot
+			)
 
-			eventsRepository.deleteAll(EventEntity.fromEvents(Events(aggregateIdentity.aggregateId,
-			aggregateIdentity.aggregateVersion, eventsToBeReverted)))
+			eventsRepository.deleteAll(
+				EventEntity.fromEvents(
+					Events(
+						aggregateIdentity.aggregateId,
+						aggregateIdentity.aggregateVersion, eventsToBeReverted
+					)
+				)
+			)
 
 			aggregateRepository.save(AggregateEntity.fromEventSourcedAggregate(updatedEvents))
 
