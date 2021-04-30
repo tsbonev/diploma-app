@@ -16,8 +16,13 @@ class MysqlEventStore(
 	@Autowired private val aggregateRepository: MysqlAggregateRepository,
 	@Autowired private val eventsRepository: MysqlEventRepository,
 	@Autowired private val snapshotsRepository: MysqlSnapshotRepository,
-	private val eventsLimit: Int = 100
+	private var eventsLimit: Int = 500
 ) : EventStore {
+
+	fun setEventLimit(limit: Int) {
+		eventsLimit = limit
+	}
+
 	override fun saveEvents(aggregateIdentity: AggregateIdentity, events: Events, saveOptions: SaveOptions): SaveEventsResponse {
 		val aggregateEntity = aggregateRepository.findById(aggregateIdentity.aggregateId)
 
@@ -27,12 +32,27 @@ class MysqlEventStore(
 				Events(aggregateIdentity.aggregateId), null
 			)
 
+		// Overlapping versions
+		if(currentAggregate.aggregateIdentity.aggregateVersion != 0L
+			&& currentAggregate.events.finalVersion >= events.finalVersion) {
+			return SaveEventsResponse.EventCollision(currentAggregate.events.finalVersion + 1, events.finalVersion)
+		}
+
+		val expectedFirstEventVersion = currentAggregate.aggregateIdentity.aggregateVersion + 1
+		val firstEventVersion = events.events.minByOrNull { it.version }?.version ?: -1L
+
+		// Missing versions
+		if(firstEventVersion != 0L && expectedFirstEventVersion != firstEventVersion) {
+			println("Collision for $expectedFirstEventVersion expected but is $firstEventVersion")
+			return SaveEventsResponse.EventCollision(expectedFirstEventVersion, firstEventVersion)
+		}
+
 
 		val newEvents = currentAggregate.events.events.plus(events.events).mapIndexed { index, eventWithContext ->
 			eventWithContext.copy(version = index.toLong())
 		}
 
-
+		// Snapshot check
 		if (currentAggregate.snapshot == null && newEvents.size - (currentAggregate.snapshot?.version
 				?: 0L) >= eventsLimit) {
 			return SaveEventsResponse.SnapshotRequired(events, currentAggregate.snapshot)
@@ -90,6 +110,44 @@ class MysqlEventStore(
 	}
 
 	override fun revertToVersion(aggregateIdentity: AggregateIdentity): RevertEventsResponse {
-		TODO("Not yet implemented")
+		val aggregateEntity = aggregateRepository.findById(aggregateIdentity.aggregateId)
+
+		val aggregate = if (aggregateEntity.isPresent) aggregateEntity.get().toEventSourcedAggregate()
+		else throw AggregateNotFoundException(aggregateIdentity.aggregateId)
+
+		val snapshot = aggregate.snapshot
+
+		if (snapshot != null && snapshot.version > aggregateIdentity.aggregateVersion) {
+			snapshotsRepository.deleteById(aggregateIdentity.aggregateId)
+		}
+
+		return if (aggregate.aggregateIdentity.aggregateVersion < aggregateIdentity.aggregateVersion) {
+			RevertEventsResponse.CannotRevertEventForward(
+				aggregate.aggregateIdentity.aggregateVersion,
+				aggregateIdentity.aggregateVersion
+			)
+		} else {
+			if (aggregate.aggregateIdentity.aggregateVersion < aggregateIdentity.aggregateVersion) return RevertEventsResponse.CannotRevertEventForward(
+				aggregate.events.finalVersion,
+				aggregateIdentity.aggregateVersion
+			)
+
+			val eventsToBeReverted = aggregate.events.events.filter { it.version > aggregateIdentity.aggregateVersion }
+
+			val revertedEvents = aggregate.events.copy(finalVersion = aggregateIdentity.aggregateVersion,
+			                                 events = aggregate.events.events.filter {
+				                                 it.version <= aggregateIdentity.aggregateVersion
+			                                 })
+
+			val updatedEvents = aggregate.copy(events = revertedEvents,
+			                                   aggregateIdentity = aggregate.aggregateIdentity.copy(aggregateVersion = aggregateIdentity.aggregateVersion))
+
+			eventsRepository.deleteAll(EventEntity.fromEvents(Events(aggregateIdentity.aggregateId,
+			aggregateIdentity.aggregateVersion, eventsToBeReverted)))
+
+			aggregateRepository.save(AggregateEntity.fromEventSourcedAggregate(updatedEvents))
+
+			RevertEventsResponse.Success(eventsToBeReverted)
+		}
 	}
 }
