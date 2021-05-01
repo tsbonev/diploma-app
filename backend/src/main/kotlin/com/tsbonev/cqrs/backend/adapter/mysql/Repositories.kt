@@ -8,7 +8,6 @@ import com.tsbonev.cqrs.core.eventstore.EventSourcedAggregate
 import com.tsbonev.cqrs.core.eventstore.EventWithContext
 import com.tsbonev.cqrs.core.eventstore.Events
 import com.tsbonev.cqrs.core.snapshot.Snapshot
-import org.springframework.core.io.ByteArrayResource
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 import javax.persistence.Entity
@@ -32,7 +31,7 @@ data class AggregateEntity(
 	@Id val aggregateId: String,
 	val type: String,
 	val version: Long,
-	@OneToMany(targetEntity = EventEntity::class) val events: List<EventEntity>,
+	@OneToMany(mappedBy = "aggregateId") val events: List<EventEntity>,
 	@OneToOne val snapshot: SnapshotEntity?
 ) {
 	companion object {

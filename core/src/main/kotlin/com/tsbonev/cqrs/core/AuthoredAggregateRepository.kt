@@ -5,8 +5,9 @@ package com.tsbonev.cqrs.core
  *
  * @author Tsvetozar Bonev (tsbonev@gmail.com)
  */
-sealed class AuthoredAggregateRepository(private val identityProvider: IdentityProvider,
-                                         private val identityAggregateRepository: IdentityAggregateRepository
+class AuthoredAggregateRepository(
+	private val identityProvider: IdentityProvider,
+	private val identityAggregateRepository: IdentityAggregateRepository
 ) : Aggregates {
 	override fun <T : AggregateRoot> save(aggregate: T) {
 		val identity = identityProvider.get()
