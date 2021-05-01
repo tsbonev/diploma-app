@@ -6,7 +6,7 @@ import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.messagebus.Interceptor
 import com.tsbonev.cqrs.core.messagebus.MessageBus
 import com.tsbonev.cqrs.core.messagebus.SimpleMessageBus
-import com.tsbonev.nharker.cqrs.Workflow
+import com.tsbonev.cqrs.core.messagebus.Workflow
 
 @Suppress("UNCHECKED_CAST")
 class InMemoryMessageBus(private val messageBus: SimpleMessageBus = SimpleMessageBus()) : MessageBus {

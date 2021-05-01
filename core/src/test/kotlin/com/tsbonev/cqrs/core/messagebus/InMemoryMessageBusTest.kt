@@ -1,7 +1,6 @@
 package com.tsbonev.cqrs.core.messagebus
 
 import com.tsbonev.cqrs.core.helpers.InMemoryMessageBus
-import com.tsbonev.nharker.cqrs.Workflow
 import org.hamcrest.CoreMatchers
 import org.junit.jupiter.api.Test
 import org.hamcrest.CoreMatchers.`is` as Is

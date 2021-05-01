@@ -1,6 +1,5 @@
 package com.tsbonev.cqrs.core.messagebus
 
-import com.tsbonev.nharker.cqrs.Workflow
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.nullValue
 import java.util.UUID

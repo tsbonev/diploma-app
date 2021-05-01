@@ -1,6 +1,5 @@
 package com.tsbonev.cqrs.core.messagebus
 
-import com.tsbonev.nharker.cqrs.Workflow
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Method
 
@@ -33,6 +32,7 @@ class SimpleMessageBus : MessageBus {
 
 		methods.forEach {
 			val parameterTypes = it.parameterTypes
+			it.isAccessible = true
 
 			/**
 			 * Add the method as a command handler.
@@ -55,6 +55,7 @@ class SimpleMessageBus : MessageBus {
 			else if (it.isAnnotationPresent(EventHandler::class.java)) {
 				validateMethod(it)
 				val handlerName = parameterTypes[0].name
+				it.isAccessible = true
 
 				if (declaredEventHandlers[handlerName] == null)
 					declaredEventHandlers[handlerName] = mutableListOf()

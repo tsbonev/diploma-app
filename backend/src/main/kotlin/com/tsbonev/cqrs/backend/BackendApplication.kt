@@ -1,7 +1,9 @@
 package com.tsbonev.cqrs.backend
 
 import com.google.gson.Gson
+import com.tsbonev.cqrs.backend.domain.CreateProductCommand
 import com.tsbonev.cqrs.backend.domain.Product
+import com.tsbonev.cqrs.backend.domain.ProductCreatedEvent
 import com.tsbonev.cqrs.backend.domain.ProductWorkflow
 import com.tsbonev.cqrs.backend.domain.StubIdentityProvider
 import com.tsbonev.cqrs.core.AuthoredAggregateRepository
@@ -15,7 +17,7 @@ import com.tsbonev.cqrs.core.messagebus.MessageBus
 import com.tsbonev.cqrs.core.messagebus.SimpleMessageBus
 import com.tsbonev.cqrs.core.messagebus.SyncEventPublisher
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
-import com.tsbonev.nharker.cqrs.Workflow
+import com.tsbonev.cqrs.core.messagebus.Workflow
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -35,8 +37,9 @@ class MessageBusConfiguration(@Autowired private val eventStore: EventStore,
                               private val messageBus: SimpleMessageBus = SimpleMessageBus()) : MessageBus {
 
 	init {
-		val gsonMessageFormat = GSONMessageFormat(Product::class.java)
-		val eventPublisher = SyncEventPublisher(messageBus, gsonMessageFormat)
+		//FIX THIS TO ACCEPT ANYTHING
+		val gsonMessageFormat = GSONMessageFormat(Product::class.java, ProductCreatedEvent::class.java, CreateProductCommand::class.java)
+		val eventPublisher = SyncEventPublisher(SimpleMessageBus(), gsonMessageFormat)
 		val aggregates = AuthoredAggregateRepository(
 			StubIdentityProvider(),
 			SimpleIdentityAggregateRepository(

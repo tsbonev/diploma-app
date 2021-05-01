@@ -79,9 +79,9 @@ class MysqlEventStore(
 
 		val updatedEntity = AggregateEntity.fromEventSourcedAggregate(updatedSnapshot)
 
-		eventsRepository.saveAll(updatedEntity.events)
 		if (updatedEntity.snapshot != null) snapshotsRepository.save(updatedEntity.snapshot)
 		aggregateRepository.save(updatedEntity)
+		eventsRepository.saveAll(updatedEntity.events)
 
 		return SaveEventsResponse.Success(
 			EventSourcedAggregate(
@@ -147,6 +147,8 @@ class MysqlEventStore(
 				snapshot = if(snapshot != null && snapshot.version > aggregateIdentity.aggregateVersion) null else aggregate.snapshot
 			)
 
+			aggregateRepository.save(AggregateEntity.fromEventSourcedAggregate(updatedEvents))
+
 			eventsRepository.deleteAll(
 				EventEntity.fromEvents(
 					Events(
@@ -155,8 +157,6 @@ class MysqlEventStore(
 					)
 				)
 			)
-
-			aggregateRepository.save(AggregateEntity.fromEventSourcedAggregate(updatedEvents))
 
 			RevertEventsResponse.Success(eventsToBeReverted)
 		}

@@ -1,4 +1,4 @@
-package com.tsbonev.nharker.cqrs
+package com.tsbonev.cqrs.core.messagebus
 
 /**
  * A marker interface for a workflow that defines command and

@@ -10,8 +10,13 @@ import com.tsbonev.cqrs.core.eventstore.Events
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
+import javax.persistence.CascadeType
+import javax.persistence.Column
 import javax.persistence.Entity
+import javax.persistence.FetchType
 import javax.persistence.Id
+import javax.persistence.JoinColumn
+import javax.persistence.ManyToOne
 import javax.persistence.OneToMany
 import javax.persistence.OneToOne
 import javax.persistence.Table
@@ -31,7 +36,7 @@ data class AggregateEntity(
 	@Id val aggregateId: String,
 	val type: String,
 	val version: Long,
-	@OneToMany(mappedBy = "aggregateId") val events: List<EventEntity>,
+	@OneToMany(mappedBy = "aggregate", cascade = [CascadeType.ALL], orphanRemoval = true) val events: List<EventEntity>,
 	@OneToOne val snapshot: SnapshotEntity?
 ) {
 	companion object {
@@ -60,18 +65,19 @@ data class AggregateEntity(
 @Table(name = "events")
 data class EventEntity(
 	@Id val eventId: String,
-	val aggregateId: String,
 	val kind: String,
 	val data: ByteArray,
 	val version: Long,
-	val context: String
+	val context: String,
+	@ManyToOne(fetch = FetchType.LAZY)
+	val aggregate: AggregateEntity?
 ) {
 	companion object {
 		fun fromEvents(events: Events) : List<EventEntity> {
 			return events.events.map { event ->
 				EventEntity("${events.aggregateId}_${event.version}",
-				            events.aggregateId, event.kind, event.eventData, event.version,
-				            Gson().toJson(event.creationContext))
+				            event.kind, event.eventData, event.version,
+				            Gson().toJson(event.creationContext), null)
 			}
 		}
 	}

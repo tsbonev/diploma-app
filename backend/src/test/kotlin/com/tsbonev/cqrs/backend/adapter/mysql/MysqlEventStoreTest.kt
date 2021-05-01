@@ -1,6 +1,5 @@
 package com.tsbonev.cqrs.backend.adapter.mysql
 
-import com.tsbonev.cqrs.core.AggregateNotFoundException
 import com.tsbonev.cqrs.core.BinaryPayload
 import com.tsbonev.cqrs.core.eventstore.AggregateIdentity
 import com.tsbonev.cqrs.core.eventstore.CreationContext
@@ -15,7 +14,6 @@ import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
@@ -160,9 +158,9 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 		)
 
 		repo.saveEvents(
-			AggregateIdentity("::aggregateId_2::", "TestAggregate", 1L),
+			AggregateIdentity("::aggregateId_2::", "TestAggregate", 0L),
 			Events(
-				"::aggregateId::", 1L, listOf(
+				"::aggregateId::", 0L, listOf(
 					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
 				)
 			),
@@ -209,6 +207,49 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 						null
 					)
 
+				)
+			)
+		)
+	}
+
+	@Test
+	fun `Get events of multiple aggregates when only one present`() {
+		repo.saveEvents(
+			AggregateIdentity("::aggregateId_1::", "TestAggregate", 1L),
+			Events(
+				"::aggregateId::", 1L, listOf(
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
+					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext())
+				)
+			),
+			SaveOptions()
+		)
+
+		val response = repo.getEvents(listOf("::aggregateId_1::", "::aggregateId_2::"))
+
+		assertThat(
+			response, Is(
+				listOf(
+					EventSourcedAggregate(
+						AggregateIdentity("::aggregateId_1::", "TestAggregate", 1L),
+						Events(
+							"::aggregateId_1::", 1L, listOf(
+								EventWithContext(
+									StubEvent().toString().toByteArray(),
+									"StubEvent",
+									0L,
+									CreationContext()
+								),
+								EventWithContext(
+									StubEvent().toString().toByteArray(),
+									"StubEvent",
+									1L,
+									CreationContext()
+								)
+							)
+						),
+						null
+					)
 				)
 			)
 		)

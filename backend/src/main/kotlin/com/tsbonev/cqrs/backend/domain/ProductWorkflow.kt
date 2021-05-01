@@ -6,9 +6,7 @@ import com.tsbonev.cqrs.core.messagebus.CommandHandler
 import com.tsbonev.cqrs.core.messagebus.CommandResponse
 import com.tsbonev.cqrs.core.messagebus.EventHandler
 import com.tsbonev.cqrs.core.messagebus.StatusCode
-import com.tsbonev.nharker.cqrs.Workflow
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
+import com.tsbonev.cqrs.core.messagebus.Workflow
 import java.util.UUID
 
 class ProductWorkflow(private val aggregateRepo: Aggregates) : Workflow {
