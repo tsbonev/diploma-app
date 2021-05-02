@@ -12,7 +12,6 @@ import com.tsbonev.cqrs.core.messagebus.Workflow
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.lang.RuntimeException
-import java.util.UUID
 
 class ProductCommandsWorkflow(private val aggregateRepo: Aggregates) : Workflow {
 
@@ -41,6 +40,19 @@ class ProductCommandsWorkflow(private val aggregateRepo: Aggregates) : Workflow 
 		aggregateRepo.save(aggregate)
 		return CommandResponse(StatusCode.Created, ProductNameChangedCommandResponse(command.productId, aggregate.name))
 	}
+
+	@CommandHandler
+	fun handle(command: ChangeProductNumberCommand) : CommandResponse {
+		val aggregate = try {
+			aggregateRepo.getById(command.productId, Product::class.java)
+		} catch (e: AggregateNotFoundException) {
+			throw ProductNotFoundException(command.productId)
+		}
+
+		aggregate.addOneToNumValue()
+		aggregateRepo.save(aggregate)
+		return CommandResponse(StatusCode.Created, ProductNumberChangedCommandResponse(command.productId, aggregate.numberValue))
+	}
 }
 
 @Component
@@ -48,7 +60,7 @@ class ProductEventsWorkflow(@Autowired private val view: MysqlProductView) : Wor
 
 	@EventHandler
 	fun handle(event: ProductCreatedEvent) {
-		view.save(ProductViewEntity(event.productId, event.productName))
+		view.save(ProductViewEntity(event.productId, event.productName, 0))
 	}
 
 	@EventHandler
@@ -56,9 +68,16 @@ class ProductEventsWorkflow(@Autowired private val view: MysqlProductView) : Wor
 		val product = view.findById(event.productId).orElseThrow { throw ProductNotFoundException(event.productId) }
 		view.save(product.copy(productName = event.productName))
 	}
+
+	@EventHandler
+	fun handle(event: ProductNumberChangedEvent) {
+		val product = view.findById(event.productId).orElseThrow { throw ProductNotFoundException(event.productId) }
+		view.save(product.copy(number = event.number))
+	}
 }
 
 
 data class ProductCreatedCommandResponse(val productId: String, val productName: String)
 data class ProductNameChangedCommandResponse(val productId: String, val productName: String)
+data class ProductNumberChangedCommandResponse(val productId: String, val number: Long)
 class ProductNotFoundException(val productId: String) : RuntimeException()

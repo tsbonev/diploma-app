@@ -8,6 +8,7 @@ import com.tsbonev.cqrs.backend.domain.ProductCommandsWorkflow
 import com.tsbonev.cqrs.backend.domain.ProductCreatedEvent
 import com.tsbonev.cqrs.backend.domain.ProductEventsWorkflow
 import com.tsbonev.cqrs.backend.domain.ProductNameChangedEvent
+import com.tsbonev.cqrs.backend.domain.ProductNumberChangedEvent
 import com.tsbonev.cqrs.backend.domain.StubIdentityProvider
 import com.tsbonev.cqrs.core.AuthoredAggregateRepository
 import com.tsbonev.cqrs.core.SimpleIdentityAggregateRepository
@@ -46,7 +47,8 @@ class MessageBusConfiguration(@Autowired private val eventStore: EventStore,
 		                                          ProductCreatedEvent::class.java,
 		                                          CreateProductCommand::class.java,
 		                                          ChangeProductNameCommand::class.java,
-		                                          ProductNameChangedEvent::class.java
+		                                          ProductNameChangedEvent::class.java,
+		                                          ProductNumberChangedEvent::class.java
 		)
 		val eventPublisher = SyncEventPublisher(messageBus, gsonMessageFormat)
 		val aggregates = AuthoredAggregateRepository(

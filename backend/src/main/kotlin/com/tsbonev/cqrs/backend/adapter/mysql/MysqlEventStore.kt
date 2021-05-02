@@ -38,15 +38,6 @@ class MysqlEventStore(
 			return SaveEventsResponse.EventCollision(currentAggregate.events.finalVersion + 1, events.finalVersion)
 		}
 
-		val expectedFirstEventVersion = currentAggregate.aggregateIdentity.aggregateVersion + 1
-		val firstEventVersion = events.finalVersion - (events.events.size - 1)
-
-		// Missing versions
-		if (firstEventVersion != 0L && expectedFirstEventVersion != firstEventVersion) {
-			println("Collision for $expectedFirstEventVersion expected but is $firstEventVersion")
-			return SaveEventsResponse.EventCollision(expectedFirstEventVersion, firstEventVersion)
-		}
-
 
 		val newEvents = currentAggregate.events.events.plus(events.events).mapIndexed { index, eventWithContext ->
 			eventWithContext.copy(version = index.toLong())
@@ -60,14 +51,11 @@ class MysqlEventStore(
 
 		val eventsFinalVersion = newEvents.size.toLong() - 1
 
-		val updatedVersion = currentAggregate.copy(
+		val updatedEvents = currentAggregate.copy(
 			aggregateIdentity = currentAggregate.aggregateIdentity.copy(
 				aggregateVersion = eventsFinalVersion
-			)
-		)
-
-		val updatedEvents = updatedVersion.copy(
-			events = updatedVersion.events.copy(
+			),
+			events = currentAggregate.events.copy(
 				finalVersion = eventsFinalVersion,
 				events = newEvents
 			)

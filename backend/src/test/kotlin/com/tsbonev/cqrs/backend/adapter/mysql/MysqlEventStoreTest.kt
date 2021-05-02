@@ -313,33 +313,6 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 	}
 
 	@Test
-	fun `Save results in event collision when missing`() {
-		repo.saveEvents(
-			AggregateIdentity("::aggregateId::", "TestAggregate", 1L),
-			Events(
-				"::aggregateId::", 1L, listOf(
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext())
-				)
-			),
-			SaveOptions()
-		)
-
-		val response = repo.saveEvents(
-			AggregateIdentity("::aggregateId::", "TestAggregate", 4L),
-			Events(
-				"::aggregateId::", 4L, listOf(
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 4L, CreationContext()),
-				)
-			),
-			SaveOptions()
-		) as SaveEventsResponse.EventCollision
-
-
-		assertThat(response, Is(SaveEventsResponse.EventCollision(2L, 4L)))
-	}
-
-	@Test
 	fun `Save results in event collision when overlap`() {
 		repo.saveEvents(
 			AggregateIdentity("::aggregateId::", "TestAggregate", 1L),
@@ -604,4 +577,5 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 	}
 
 	data class StubEvent(val stubData: String = "::stub::") : Event
+	data class StubEventStability(val stubData: String = "::stub::", val stubDataStable: Long = 1L) : Event
 }

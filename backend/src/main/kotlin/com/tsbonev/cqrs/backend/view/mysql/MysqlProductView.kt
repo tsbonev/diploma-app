@@ -13,5 +13,6 @@ interface MysqlProductView : CrudRepository<ProductViewEntity, String>
 @Table(name = "product_view")
 data class ProductViewEntity (
 	@Id val productId: String,
-	val productName: String
+	val productName: String,
+	val number: Long
 )

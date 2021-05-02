@@ -1,20 +1,19 @@
 package com.tsbonev.cqrs.backend.api
 
+import com.tsbonev.cqrs.backend.domain.ChangeProductNumberCommand
 import com.tsbonev.cqrs.backend.domain.ChangeProductNameCommand
 import com.tsbonev.cqrs.backend.domain.CreateProductCommand
 import com.tsbonev.cqrs.backend.domain.ProductCreatedCommandResponse
 import com.tsbonev.cqrs.backend.domain.ProductNameChangedCommandResponse
+import com.tsbonev.cqrs.backend.domain.ProductNumberChangedCommandResponse
 import com.tsbonev.cqrs.core.messagebus.MessageBus
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.lang.RuntimeException
-import java.time.Instant
 import java.util.UUID
 
 
@@ -41,6 +40,15 @@ class ProductController(
 		if(commandResponse.isPresent) return ProductNameChangedResponse(commandResponse.get() as ProductNameChangedCommandResponse)
 		else throw MessageBusException()
 	}
+
+	@PutMapping("/number")
+	fun addToNumberValue(@RequestBody changeProductNumberRequest: ChangeProductNumberRequest): ProductNumberChangedResponse {
+		val createProductCommand = ChangeProductNumberCommand(changeProductNumberRequest.productId)
+		val commandResponse = messageBus.send(createProductCommand).payload
+
+		if(commandResponse.isPresent) return ProductNumberChangedResponse(commandResponse.get() as ProductNumberChangedCommandResponse)
+		else throw MessageBusException()
+	}
 }
 
 class MessageBusException : RuntimeException()
@@ -54,3 +62,9 @@ data class ChangeProductNameRequest(val productId: String, val name: String)
 data class ProductNameChangedResponse(val id: String, val name: String) {
 	constructor(response: ProductNameChangedCommandResponse) : this(response.productId, response.productName)
 }
+
+data class ChangeProductNumberRequest(val productId: String)
+data class ProductNumberChangedResponse(val id: String, val number: Long) {
+	constructor(response: ProductNumberChangedCommandResponse) : this(response.productId, response.number)
+}
+

@@ -57,7 +57,7 @@ data class AggregateEntity(
 			return EventSourcedAggregate(
 				AggregateIdentity(this.aggregateId, this.type, this.version),
 				Events(this.aggregateId, this.version,
-				       this.events.filter { it.version > this.snapshot.version }.map { it.toEventWithContext() }),
+				       this.events.filter { it.version >= this.snapshot.version }.map { it.toEventWithContext() }),
 				this.snapshot.toSnapshot()
 			)
 		}
