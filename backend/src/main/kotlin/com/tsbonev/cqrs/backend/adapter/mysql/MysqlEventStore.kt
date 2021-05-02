@@ -16,7 +16,7 @@ class MysqlEventStore(
 	@Autowired private val aggregateRepository: MysqlAggregateRepository,
 	@Autowired private val eventsRepository: MysqlEventRepository,
 	@Autowired private val snapshotsRepository: MysqlSnapshotRepository,
-	private var eventsLimit: Int = 500
+	private var eventsLimit: Int = 5
 ) : EventStore {
 
 	fun setEventLimit(limit: Int) {
@@ -53,9 +53,9 @@ class MysqlEventStore(
 		}
 
 		// Snapshot check
-		if (currentAggregate.snapshot == null && newEvents.size - (currentAggregate.snapshot?.version
+		if (saveOptions.snapshot == null && newEvents.size - (currentAggregate.snapshot?.version
 				?: 0L) >= eventsLimit) {
-			return SaveEventsResponse.SnapshotRequired(events, currentAggregate.snapshot)
+			return SaveEventsResponse.SnapshotRequired(currentAggregate.events, currentAggregate.snapshot)
 		}
 
 		val eventsFinalVersion = newEvents.size.toLong() - 1

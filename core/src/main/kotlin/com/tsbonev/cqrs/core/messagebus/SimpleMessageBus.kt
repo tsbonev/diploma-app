@@ -95,11 +95,6 @@ class SimpleMessageBus : MessageBus {
 
 		val commandHandler = commandHandlers[key]
 
-		println("------------------------------")
-		println("Registered handlers are $commandHandlers")
-		println("Command is $command")
-		println("CommandHandler is $commandHandler")
-
 		return commandHandler?.invoke(command)
 			?: throw NoHandlersInWorkflowException("No handler registered for $key command class")
 	}
