@@ -7,10 +7,11 @@ import com.tsbonev.cqrs.core.snapshot.SnapshotMapper
 import java.io.ByteArrayInputStream
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import java.util.UUID
 
 
 abstract class AggregateRootBase private constructor(
-	protected var aggregateId: String = "",
+	protected var aggregateId: String = UUID.randomUUID().toString(),
 	protected var version: Long = -1L
 ) : AggregateRoot {
 	private val events: ArrayList<Event> = arrayListOf();

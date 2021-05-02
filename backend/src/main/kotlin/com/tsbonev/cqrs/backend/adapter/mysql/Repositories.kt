@@ -36,7 +36,7 @@ data class AggregateEntity(
 	@Id val aggregateId: String,
 	val type: String,
 	val version: Long,
-	@OneToMany(mappedBy = "aggregate", cascade = [CascadeType.ALL], orphanRemoval = true) val events: List<EventEntity>,
+	@OneToMany(cascade=[CascadeType.ALL]) @JoinColumn(name="aggregateId") val events: List<EventEntity>,
 	@OneToOne val snapshot: SnapshotEntity?
 ) {
 	companion object {
@@ -68,16 +68,14 @@ data class EventEntity(
 	val kind: String,
 	val data: ByteArray,
 	val version: Long,
-	val context: String,
-	@ManyToOne(fetch = FetchType.LAZY)
-	val aggregate: AggregateEntity?
+	val context: String
 ) {
 	companion object {
 		fun fromEvents(events: Events) : List<EventEntity> {
 			return events.events.map { event ->
 				EventEntity("${events.aggregateId}_${event.version}",
 				            event.kind, event.eventData, event.version,
-				            Gson().toJson(event.creationContext), null)
+				            Gson().toJson(event.creationContext))
 			}
 		}
 	}

@@ -1,10 +1,13 @@
 package com.tsbonev.cqrs.backend
 
 import com.google.gson.Gson
+import com.tsbonev.cqrs.backend.domain.ChangeProductNameCommand
 import com.tsbonev.cqrs.backend.domain.CreateProductCommand
 import com.tsbonev.cqrs.backend.domain.Product
+import com.tsbonev.cqrs.backend.domain.ProductCommandsWorkflow
 import com.tsbonev.cqrs.backend.domain.ProductCreatedEvent
-import com.tsbonev.cqrs.backend.domain.ProductWorkflow
+import com.tsbonev.cqrs.backend.domain.ProductEventsWorkflow
+import com.tsbonev.cqrs.backend.domain.ProductNameChangedEvent
 import com.tsbonev.cqrs.backend.domain.StubIdentityProvider
 import com.tsbonev.cqrs.core.AuthoredAggregateRepository
 import com.tsbonev.cqrs.core.SimpleIdentityAggregateRepository
@@ -34,11 +37,18 @@ fun main(args: Array<String>) {
 
 @Component
 class MessageBusConfiguration(@Autowired private val eventStore: EventStore,
-                              private val messageBus: SimpleMessageBus = SimpleMessageBus()) : MessageBus {
+                              private val messageBus: SimpleMessageBus = SimpleMessageBus(),
+                              @Autowired private val productEventWorkflow: ProductEventsWorkflow
+) : MessageBus {
 
 	init {
-		val gsonMessageFormat = GSONMessageFormat(Product::class.java, ProductCreatedEvent::class.java, CreateProductCommand::class.java)
-		val eventPublisher = SyncEventPublisher(SimpleMessageBus(), gsonMessageFormat)
+		val gsonMessageFormat = GSONMessageFormat(Product::class.java,
+		                                          ProductCreatedEvent::class.java,
+		                                          CreateProductCommand::class.java,
+		                                          ChangeProductNameCommand::class.java,
+		                                          ProductNameChangedEvent::class.java
+		)
+		val eventPublisher = SyncEventPublisher(messageBus, gsonMessageFormat)
 		val aggregates = AuthoredAggregateRepository(
 			StubIdentityProvider(),
 			SimpleIdentityAggregateRepository(
@@ -48,7 +58,8 @@ class MessageBusConfiguration(@Autowired private val eventStore: EventStore,
 			)
 		)
 
-		messageBus.registerWorkflow(ProductWorkflow(aggregates))
+		messageBus.registerWorkflow(ProductCommandsWorkflow(aggregates))
+		messageBus.registerWorkflow(productEventWorkflow)
 	}
 
 	override fun registerWorkflow(workflow: Workflow) {
