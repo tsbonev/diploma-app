@@ -52,16 +52,17 @@ data class AggregateEntity(
 		}
 	}
 
-	fun toEventSourcedAggregate(saving: Boolean = true) : EventSourcedAggregate {
-		if(this.snapshot != null && !saving) {
-			return EventSourcedAggregate(
+	fun toEventSourcedAggregateEntityAccountingForSnapshot(): EventSourcedAggregate {
+		return if (this.snapshot != null) {
+			EventSourcedAggregate(
 				AggregateIdentity(this.aggregateId, this.type, this.version),
-				Events(this.aggregateId, this.version,
-				       this.events.filter { it.version >= this.snapshot.version }.map { it.toEventWithContext() }),
+				Events(this.aggregateId, this.version, this.events.filter { it.version > snapshot.version }.map { it.toEventWithContext() }),
 				this.snapshot.toSnapshot()
 			)
-		}
+		} else this.toEventSourcedAggregate()
+	}
 
+	fun toEventSourcedAggregate() : EventSourcedAggregate {
 		return EventSourcedAggregate(
 			AggregateIdentity(this.aggregateId, this.type, this.version),
 			Events(this.aggregateId, this.version, this.events.map { it.toEventWithContext() }),
@@ -98,7 +99,7 @@ data class EventEntity(
 @Entity
 @Table(name = "snapshots")
 data class SnapshotEntity(
-	@Id val aggregateId: String,
+	@Id val snapshotId: String,
 	val version: Long,
 	val data: ByteArray
 ) {

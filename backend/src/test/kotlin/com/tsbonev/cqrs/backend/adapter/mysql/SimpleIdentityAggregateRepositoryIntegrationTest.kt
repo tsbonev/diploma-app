@@ -253,6 +253,49 @@ class SimpleIdentityAggregateRepositoryTest constructor(@Autowired val repo: Eve
 	}
 
 	@Test
+	fun `Creates snapshot at limit and keeps events in order`() {
+		val eventStore = repo as MysqlEventStore
+		eventStore.setEventLimit(3)
+
+		var aggregate = TestAggregate(
+			"::id::", "::string::", 1, TestObject("::value::"),
+			listOf(TestObject("::value2::"))
+		)
+
+		val eventPublisher = InMemoryEventPublisher(messageFormat)
+		val eventRepository = SimpleIdentityAggregateRepository(eventStore, messageFormat, eventPublisher)
+		eventRepository.save(aggregate, anyIdentity) // version 0
+
+		aggregate = eventRepository.getById(aggregate.getId(), TestAggregate::class.java, anyIdentity)
+
+		aggregate.changeLong(123) // version 1, appendable 1
+		eventRepository.save(aggregate, anyIdentity)
+
+		aggregate.changeString("abv") // version 2, appendable 1
+		eventRepository.save(aggregate, anyIdentity)
+
+		aggregate.changeString("abv1") // version 3, appendable 1
+		eventRepository.save(aggregate, anyIdentity)
+
+		aggregate.changeLong(123) // version 4, appendable 2
+		eventRepository.save(aggregate, anyIdentity)
+
+		aggregate.changeLong(123) // version 5, appendable 3
+		eventRepository.save(aggregate, anyIdentity)
+
+		aggregate.changeLong(123) // version 6, appendable 4
+		eventRepository.save(aggregate, anyIdentity)
+
+		aggregate.changeString("abv2") // version 7, appendable 4
+		eventRepository.save(aggregate, anyIdentity)
+
+		aggregate = eventRepository.getById(aggregate.getId(), TestAggregate::class.java, anyIdentity)
+
+		assertThat(aggregate.getExpectedVersion(), Is(7L))
+		assertThat(aggregate.appendableValue, equalTo(4L))
+	}
+
+	@Test
 	fun `Creates multiple snapshots`() {
 		val eventStore = repo as MysqlEventStore
 		eventStore.setEventLimit(2)
@@ -353,9 +396,10 @@ class SimpleIdentityAggregateRepositoryTest constructor(@Autowired val repo: Eve
 
 data class TestAggregate private constructor(
 	var string: String, var long: Long, var testObject: TestObject,
-	var list: List<TestObject>
+	var list: List<TestObject>,
+	var appendableValue: Long = 0L
 ) : AggregateRootBase() {
-	constructor() : this("", 0, TestObject(), listOf())
+	constructor() : this("", 0, TestObject(), listOf(), 0L)
 
 	constructor(id: String, string: String, long: Long, testObject: TestObject, list: List<TestObject>) : this(
 		string,
@@ -391,6 +435,7 @@ data class TestAggregate private constructor(
 	}
 
 	fun apply(event: ChangeLongEvent) {
+		appendableValue += 1
 		long = event.newLong
 	}
 

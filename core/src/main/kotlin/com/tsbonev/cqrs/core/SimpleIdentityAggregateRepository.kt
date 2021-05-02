@@ -154,7 +154,7 @@ class SimpleIdentityAggregateRepository(
 		val history = mutableListOf<Event>()
 		events.events.forEach {
 			if (messageFormat.supportsKind(it.kind)) {
-				val event = messageFormat.parse<Any>(ByteArrayInputStream(it.eventData), it.kind) as Event
+				val event = messageFormat.parse<Event>(ByteArrayInputStream(it.eventData), it.kind)
 				history.add(event)
 			}
 		}
@@ -164,6 +164,7 @@ class SimpleIdentityAggregateRepository(
 			aggregate = type.newInstance()
 			if (snapshot != null) {
 				aggregate = aggregate.fromSnapshot(snapshot.data.payload, snapshot.version, messageFormat) as T
+
 			}
 		} catch (e: InstantiationException) {
 			throw HydrationException(id, "target type: '${type.name}' cannot be instantiated")
