@@ -37,7 +37,6 @@ class MessageBusConfiguration(@Autowired private val eventStore: EventStore,
                               private val messageBus: SimpleMessageBus = SimpleMessageBus()) : MessageBus {
 
 	init {
-		//FIX THIS TO ACCEPT ANYTHING
 		val gsonMessageFormat = GSONMessageFormat(Product::class.java, ProductCreatedEvent::class.java, CreateProductCommand::class.java)
 		val eventPublisher = SyncEventPublisher(SimpleMessageBus(), gsonMessageFormat)
 		val aggregates = AuthoredAggregateRepository(
