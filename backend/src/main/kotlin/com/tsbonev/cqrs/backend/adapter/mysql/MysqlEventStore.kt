@@ -39,7 +39,7 @@ class MysqlEventStore(
 		}
 
 		val expectedFirstEventVersion = currentAggregate.aggregateIdentity.aggregateVersion + 1
-		val firstEventVersion = events.events.minByOrNull { it.version }?.version ?: -1L
+		val firstEventVersion = events.finalVersion - (events.events.size - 1)
 
 		// Missing versions
 		if (firstEventVersion != 0L && expectedFirstEventVersion != firstEventVersion) {

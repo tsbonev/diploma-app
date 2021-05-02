@@ -396,8 +396,8 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 			response, Is(
 				SaveEventsResponse.SnapshotRequired(
 					Events(
-						"::aggregateId::", 1L, listOf(
-							EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
+						"::aggregateId::", 0L, listOf(
+							EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
 						)
 					),
 					null
