@@ -99,14 +99,14 @@ class MysqlEventStore(
 	override fun getEvents(aggregateId: String): EventSourcedAggregate {
 		val aggregateEntity = aggregateRepository.findById(aggregateId)
 
-		return if (aggregateEntity.isPresent) aggregateEntity.get().toEventSourcedAggregate()
+		return if (aggregateEntity.isPresent) aggregateEntity.get().toEventSourcedAggregate(saving = false)
 		else throw AggregateNotFoundException(aggregateId)
 	}
 
 	override fun getEvents(aggregateIds: List<String>): List<EventSourcedAggregate> {
 		val aggregateEntities = aggregateRepository.findAllById(aggregateIds)
 
-		return aggregateEntities.map { it.toEventSourcedAggregate() }
+		return aggregateEntities.map { it.toEventSourcedAggregate(saving = false) }
 	}
 
 	override fun revertToVersion(aggregateIdentity: AggregateIdentity): RevertEventsResponse {

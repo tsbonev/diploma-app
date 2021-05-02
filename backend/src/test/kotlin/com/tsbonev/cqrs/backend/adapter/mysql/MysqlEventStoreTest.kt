@@ -425,9 +425,7 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 				EventSourcedAggregate(
 					AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
 					Events(
-						"::aggregateId::", 0L, listOf(
-							EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-						)
+						"::aggregateId::", 0L, listOf()
 					),
 					Snapshot(0L, BinaryPayload("::stub::"))
 				)
@@ -558,7 +556,7 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 				AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
 				Events(
 					"::aggregateId::", 0L, listOf(
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext())
+						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
 					)
 				)
 			)))
@@ -599,10 +597,7 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 			EventSourcedAggregate(
 				AggregateIdentity("::aggregateId::", "TestAggregate", 1L),
 				Events(
-					"::aggregateId::", 1L, listOf(
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext())
-					)
+					"::aggregateId::", 1L, listOf()
 				),
 				Snapshot(1L, BinaryPayload("::stub::"))
 			)))

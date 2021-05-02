@@ -8,6 +8,7 @@ import com.tsbonev.cqrs.core.eventstore.EventSourcedAggregate
 import com.tsbonev.cqrs.core.eventstore.EventWithContext
 import com.tsbonev.cqrs.core.eventstore.Events
 import com.tsbonev.cqrs.core.snapshot.Snapshot
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 import javax.persistence.CascadeType
@@ -36,7 +37,7 @@ data class AggregateEntity(
 	@Id val aggregateId: String,
 	val type: String,
 	val version: Long,
-	@OneToMany(cascade=[CascadeType.ALL]) @JoinColumn(name="aggregateId") val events: List<EventEntity>,
+	@OneToMany(cascade=[CascadeType.ALL], fetch = FetchType.LAZY) @JoinColumn(name="aggregateId") val events: List<EventEntity>,
 	@OneToOne val snapshot: SnapshotEntity?
 ) {
 	companion object {
@@ -51,7 +52,16 @@ data class AggregateEntity(
 		}
 	}
 
-	fun toEventSourcedAggregate() : EventSourcedAggregate {
+	fun toEventSourcedAggregate(saving: Boolean = true) : EventSourcedAggregate {
+		if(this.snapshot != null && !saving) {
+			return EventSourcedAggregate(
+				AggregateIdentity(this.aggregateId, this.type, this.version),
+				Events(this.aggregateId, this.version,
+				       this.events.filter { it.version > this.snapshot.version }.map { it.toEventWithContext() }),
+				this.snapshot.toSnapshot()
+			)
+		}
+
 		return EventSourcedAggregate(
 			AggregateIdentity(this.aggregateId, this.type, this.version),
 			Events(this.aggregateId, this.version, this.events.map { it.toEventWithContext() }),
