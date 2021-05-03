@@ -1,9 +1,6 @@
 package com.tsbonev.cqrs.core.snapshot
 
-import java.io.InputStream
-
-
-interface MessageFormat {
+interface MessageFormat<V> {
 
 	/**
 	 * Ensures that the provided kind could be supported.
@@ -13,10 +10,10 @@ interface MessageFormat {
 	/**
 	 * Parses JSON content from the provided input stream.
 	 */
-	fun <T> parse(stream: InputStream, kind: String): T
+	fun <T> parse(value: V, kind: String): T
 
 	/**
 	 * Formats the provided value into binary value.
 	 */
-	fun formatToBytes(value: Any): ByteArray
+	fun format(value: Any): V
 }

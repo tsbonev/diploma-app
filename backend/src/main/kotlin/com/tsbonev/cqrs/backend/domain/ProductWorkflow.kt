@@ -3,7 +3,7 @@ package com.tsbonev.cqrs.backend.domain
 import com.tsbonev.cqrs.backend.view.mysql.MysqlProductView
 import com.tsbonev.cqrs.backend.view.mysql.ProductViewEntity
 import com.tsbonev.cqrs.core.AggregateNotFoundException
-import com.tsbonev.cqrs.core.Aggregates
+import com.tsbonev.cqrs.core.AggregateRepository
 import com.tsbonev.cqrs.core.messagebus.CommandHandler
 import com.tsbonev.cqrs.core.messagebus.CommandResponse
 import com.tsbonev.cqrs.core.messagebus.EventHandler
@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.lang.RuntimeException
 
-class ProductCommandsWorkflow(private val aggregateRepo: Aggregates) : Workflow {
+class ProductCommandsWorkflow(private val aggregateRepo: AggregateRepository) : Workflow {
 
 	@CommandHandler
 	fun handle(command: CreateProductCommand) : CommandResponse {

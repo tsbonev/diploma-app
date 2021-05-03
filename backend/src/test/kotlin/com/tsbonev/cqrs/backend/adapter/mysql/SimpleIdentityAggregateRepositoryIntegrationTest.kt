@@ -3,7 +3,6 @@ package com.tsbonev.cqrs.backend.adapter.mysql
 import com.google.gson.Gson
 import com.tsbonev.cqrs.core.AggregateNotFoundException
 import com.tsbonev.cqrs.core.AggregateRootBase
-import com.tsbonev.cqrs.core.DataModelFormat
 import com.tsbonev.cqrs.core.Identity
 import com.tsbonev.cqrs.core.PublishErrorException
 import com.tsbonev.cqrs.core.SimpleIdentityAggregateRepository
@@ -47,12 +46,12 @@ class SimpleIdentityAggregateRepositoryTest constructor(@Autowired val repo: Eve
 		ChangeListEvent::class.java,
 		TestAggregate::class.java,
 		Invoice::class.java
-	)
+	) as MessageFormat<Any>
 
 	private val anyIdentity = Identity(
 		"::user id::", LocalDateTime.of(2018, 4, 1, 10, 12, 34).toInstant(
 			ZoneOffset.UTC
-		)
+		).toEpochMilli()
 	)
 
 	@Test
@@ -452,7 +451,8 @@ data class TestAggregate private constructor(
 	}
 }
 
-class TestMessageFormat(vararg types: Class<*>) : MessageFormat, DataModelFormat {
+@Suppress("UNCHECKED_CAST")
+class TestMessageFormat(vararg types: Class<*>) : MessageFormat<String> {
 	private val gson = Gson()
 	private val kindToType = mutableMapOf<String, Class<*>>()
 
@@ -466,21 +466,12 @@ class TestMessageFormat(vararg types: Class<*>) : MessageFormat, DataModelFormat
 		return kindToType.containsKey(kind)
 	}
 
-	@Suppress("UNCHECKED_CAST")
-	override fun <T> parse(stream: InputStream, kind: String): T {
+	override fun <T> parse(value: String, kind: String): T {
 		val type = kindToType.getValue(kind)
-		return gson.fromJson(InputStreamReader(stream, Charsets.UTF_8), type) as T
+		return gson.fromJson(value, type) as T
 	}
 
-	override fun formatToBytes(value: Any): ByteArray {
-		return gson.toJson(value).toByteArray(Charsets.UTF_8)
-	}
-
-	override fun <T> parse(stream: InputStream, type: Type): T {
-		return gson.fromJson(InputStreamReader(stream, Charsets.UTF_8), type)
-	}
-
-	override fun formatToString(value: Any): String {
+	override fun format(value: Any): String {
 		return gson.toJson(value)
 	}
 }

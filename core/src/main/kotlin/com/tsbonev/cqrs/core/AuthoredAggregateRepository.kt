@@ -8,7 +8,7 @@ package com.tsbonev.cqrs.core
 class AuthoredAggregateRepository(
 	private val identityProvider: IdentityProvider,
 	private val identityAggregateRepository: IdentityAggregateRepository
-) : Aggregates {
+) : AggregateRepository {
 	override fun <T : AggregateRoot> save(aggregate: T) {
 		val identity = identityProvider.get()
 		identityAggregateRepository.save(aggregate, identity)

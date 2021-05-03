@@ -12,13 +12,12 @@ import com.tsbonev.cqrs.core.eventstore.User
 import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.snapshot.Snapshot
-import java.io.ByteArrayInputStream
 import java.util.UUID
 
 
 class SimpleIdentityAggregateRepository(
 	private val eventStore: EventStore,
-	private val messageFormat: MessageFormat,
+	private val messageFormat: MessageFormat<Any>,
 	private val eventPublisher: EventPublisher
 ) : IdentityAggregateRepository {
 
@@ -71,7 +70,7 @@ class SimpleIdentityAggregateRepository(
 
 		val events = uncommittedEvents.map {
 			EventWithContext(
-				messageFormat.formatToBytes(it),
+				messageFormat.format(it)!!,
 				it::class.java.simpleName,
 				0L,
 				CreationContext(User(identity.id), identity.time)
@@ -152,7 +151,7 @@ class SimpleIdentityAggregateRepository(
 		val history = mutableListOf<Event>()
 		events.events.forEach {
 			if (messageFormat.supportsKind(it.kind)) {
-				val event = messageFormat.parse<Event>(ByteArrayInputStream(it.eventData), it.kind)
+				val event = messageFormat.parse<Event>(it.eventData, it.kind)
 				history.add(event)
 			}
 		}
@@ -161,7 +160,7 @@ class SimpleIdentityAggregateRepository(
 		try {
 			aggregate = type.newInstance()
 			if (snapshot != null) {
-				aggregate = aggregate.fromSnapshot(snapshot.data.payload, snapshot.version, messageFormat) as T
+				aggregate = aggregate.fromSnapshot(snapshot.data, snapshot.version, messageFormat) as T
 
 			}
 		} catch (e: InstantiationException) {

@@ -1,7 +1,7 @@
 package com.tsbonev.cqrs.core
 
 
-interface Aggregates {
+interface AggregateRepository {
 	/**
 	 * Creates a new or updates an existing aggregate in the repository.
 	 */

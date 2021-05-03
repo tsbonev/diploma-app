@@ -2,10 +2,10 @@ package com.tsbonev.cqrs.core.helpers
 
 import com.tsbonev.cqrs.core.AggregateNotFoundException
 import com.tsbonev.cqrs.core.AggregateRoot
-import com.tsbonev.cqrs.core.Aggregates
+import com.tsbonev.cqrs.core.AggregateRepository
 import com.tsbonev.cqrs.core.messagebus.Event
 
-class InMemoryAggregateRepository : Aggregates {
+class InMemoryAggregateRepository : AggregateRepository {
 	private val aggregateIdToEvents = mutableMapOf<String, MutableList<AggregatedEvent>>()
 
 	override fun <T : AggregateRoot> save(aggregate: T) {

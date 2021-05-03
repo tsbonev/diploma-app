@@ -46,5 +46,5 @@ interface AggregateRoot {
 	/**
 	 * Builds an aggregate from snapshot data and the current version of the snapshot
 	 */
-	fun <T : AggregateRoot> fromSnapshot(snapshotData: ByteArray, snapshotVersion: Long, messageFormat: MessageFormat): T
+	fun <T : AggregateRoot> fromSnapshot(snapshotData: Any, snapshotVersion: Long, messageFormat: MessageFormat<Any>): T
 }

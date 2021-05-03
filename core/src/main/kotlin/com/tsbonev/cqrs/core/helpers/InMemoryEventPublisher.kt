@@ -7,7 +7,7 @@ import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import java.io.ByteArrayInputStream
 
-class InMemoryEventPublisher(private val messageFormat: MessageFormat) : EventPublisher {
+class InMemoryEventPublisher(private val messageFormat: MessageFormat<Any>) : EventPublisher {
 	var events = mutableListOf<Event>()
 	private var nextPublishFailsWithError = false
 
@@ -21,7 +21,7 @@ class InMemoryEventPublisher(private val messageFormat: MessageFormat) : EventPu
 			throw PublishErrorException()
 		}
 		this.events.addAll(events.map {
-			messageFormat.parse(ByteArrayInputStream(it.eventData), it.kind) as Event
+			messageFormat.parse(it.eventData as String, it.kind) as Event
 		})
 	}
 }

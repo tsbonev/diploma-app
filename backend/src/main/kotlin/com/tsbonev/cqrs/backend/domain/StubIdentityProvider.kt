@@ -8,6 +8,6 @@ import java.time.Instant
 @Component
 class StubIdentityProvider : IdentityProvider {
 	override fun get(): Identity {
-		return Identity("::stubId:", Instant.now())
+		return Identity("::stubId:", Instant.now().toEpochMilli())
 	}
 }

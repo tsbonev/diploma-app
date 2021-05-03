@@ -4,7 +4,6 @@ import com.tsbonev.cqrs.core.messagebus.Event
 import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.snapshot.Snapshot
 import com.tsbonev.cqrs.core.snapshot.SnapshotMapper
-import java.io.ByteArrayInputStream
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.UUID
@@ -74,17 +73,17 @@ abstract class AggregateRootBase private constructor(
 
 	override fun getSnapshotMapper(): SnapshotMapper<AggregateRoot> {
 		return object : SnapshotMapper<AggregateRoot> {
-			override fun toSnapshot(data: AggregateRoot, messageFormat: MessageFormat): Snapshot {
-				return Snapshot(data.getExpectedVersion(), BinaryPayload(messageFormat.formatToBytes(data)))
+			override fun toSnapshot(data: AggregateRoot, messageFormat: MessageFormat<Any>): Snapshot {
+				return Snapshot(data.getExpectedVersion(), messageFormat.format(data))
 			}
 
 			override fun fromSnapshot(
-				snapshot: ByteArray,
+				snapshot: Any,
 				snapshotVersion: Long,
-				messageFormat: MessageFormat
+				messageFormat: MessageFormat<Any>
 			): AggregateRoot {
 				return messageFormat.parse(
-					ByteArrayInputStream(snapshot),
+					snapshot,
 					this@AggregateRootBase::class.java.simpleName
 				)
 			}
@@ -92,11 +91,7 @@ abstract class AggregateRootBase private constructor(
 	}
 
 	@Suppress("UNCHECKED_CAST")
-	final override fun <T : AggregateRoot> fromSnapshot(
-		snapshotData: ByteArray,
-		snapshotVersion: Long,
-		messageFormat: MessageFormat
-	): T {
+	final override fun <T : AggregateRoot> fromSnapshot(snapshotData: Any, snapshotVersion: Long, messageFormat: MessageFormat<Any>): T {
 		val snapshotRootBase = getSnapshotMapper().fromSnapshot(
 			snapshotData,
 			snapshotVersion,

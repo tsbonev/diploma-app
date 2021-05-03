@@ -7,11 +7,11 @@ import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import java.io.ByteArrayInputStream
 
 
-class SyncEventPublisher(private val messageBus: MessageBus, private val messageFormat: MessageFormat) : EventPublisher {
+class SyncEventPublisher(private val messageBus: MessageBus, private val messageFormat: MessageFormat<Any>) : EventPublisher {
 	override fun publish(events: Iterable<EventWithContext>) {
 		events.forEach {
 			try {
-				messageBus.publish(messageFormat.parse(ByteArrayInputStream(it.eventData), it.kind))
+				messageBus.publish(messageFormat.parse(it.eventData, it.kind))
 			} catch (ex: Exception) {
 				throw PublishErrorException(ex)
 			}

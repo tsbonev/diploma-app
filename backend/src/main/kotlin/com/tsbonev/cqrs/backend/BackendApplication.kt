@@ -20,8 +20,8 @@ import com.tsbonev.cqrs.core.messagebus.Interceptor
 import com.tsbonev.cqrs.core.messagebus.MessageBus
 import com.tsbonev.cqrs.core.messagebus.SimpleMessageBus
 import com.tsbonev.cqrs.core.messagebus.SyncEventPublisher
-import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import com.tsbonev.cqrs.core.messagebus.Workflow
+import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -37,19 +37,23 @@ fun main(args: Array<String>) {
 }
 
 @Component
-class MessageBusConfiguration(@Autowired private val eventStore: EventStore,
-                              private val messageBus: SimpleMessageBus = SimpleMessageBus(),
-                              @Autowired private val productEventWorkflow: ProductEventsWorkflow
+class MessageBusConfiguration(
+	@Autowired private val eventStore: EventStore,
+	private val messageBus: SimpleMessageBus = SimpleMessageBus(),
+	@Autowired private val productEventWorkflow: ProductEventsWorkflow
 ) : MessageBus {
 
 	init {
-		val gsonMessageFormat = GSONMessageFormat(Product::class.java,
-		                                          ProductCreatedEvent::class.java,
-		                                          CreateProductCommand::class.java,
-		                                          ChangeProductNameCommand::class.java,
-		                                          ProductNameChangedEvent::class.java,
-		                                          ProductNumberChangedEvent::class.java
-		)
+		@Suppress("UNCHECKED_CAST")
+		val gsonMessageFormat = GSONMessageFormat(
+			Product::class.java,
+			ProductCreatedEvent::class.java,
+			CreateProductCommand::class.java,
+			ChangeProductNameCommand::class.java,
+			ProductNameChangedEvent::class.java,
+			ProductNumberChangedEvent::class.java
+		) as MessageFormat<Any>
+
 		val eventPublisher = SyncEventPublisher(messageBus, gsonMessageFormat)
 		val aggregates = AuthoredAggregateRepository(
 			StubIdentityProvider(),
@@ -81,7 +85,7 @@ class MessageBusConfiguration(@Autowired private val eventStore: EventStore,
 	}
 }
 
-class GSONMessageFormat(vararg types: Class<*>) : MessageFormat {
+class GSONMessageFormat(vararg types: Class<*>) : MessageFormat<String> {
 	private val gson = Gson()
 	private val kindToType = mutableMapOf<String, Class<*>>()
 
@@ -91,19 +95,17 @@ class GSONMessageFormat(vararg types: Class<*>) : MessageFormat {
 		}
 	}
 
-
 	override fun supportsKind(kind: String): Boolean {
 		return kindToType.containsKey(kind)
 	}
 
-
 	@Suppress("UNCHECKED_CAST")
-	override fun <T> parse(stream: InputStream, kind: String): T {
+	override fun <T> parse(value: String, kind: String): T {
 		val type = kindToType.getValue(kind)
-		return gson.fromJson(InputStreamReader(stream, Charsets.UTF_8), type) as T
+		return gson.fromJson(value, type) as T
 	}
 
-	override fun formatToBytes(value: Any): ByteArray {
-		return gson.toJson(value).toByteArray(Charsets.UTF_8)
+	override fun format(value: Any): String {
+		return gson.toJson(value)
 	}
 }

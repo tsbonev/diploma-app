@@ -1,13 +1,12 @@
 package com.tsbonev.cqrs.core.messagebus
 
-import com.tsbonev.cqrs.core.BinaryPayload
-import com.tsbonev.cqrs.core.EventWithBinaryPayload
 import com.tsbonev.cqrs.core.PublishErrorException
 import com.tsbonev.cqrs.core.TestMessageFormat
 import com.tsbonev.cqrs.core.eventstore.CreationContext
 import com.tsbonev.cqrs.core.eventstore.EventWithContext
 import com.tsbonev.cqrs.core.eventstore.User
 import com.tsbonev.cqrs.core.helpers.InMemoryMessageBus
+import com.tsbonev.cqrs.core.snapshot.MessageFormat
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers
 import org.jmock.AbstractExpectations
@@ -31,7 +30,7 @@ class SyncEventPublisherTest {
 	@Test
 	fun `Handles events`() {
 		val instant = Instant.now()
-		val messageFormat = TestMessageFormat(MyEvent::class.java)
+		val messageFormat = TestMessageFormat(MyEvent::class.java) as MessageFormat<Any>
 		val messageBus = InMemoryMessageBus()
 		val syncEventPublisher = SyncEventPublisher(messageBus, messageFormat)
 		val firstEvent = MyEvent("Foo")
@@ -39,13 +38,13 @@ class SyncEventPublisherTest {
 		syncEventPublisher.publish(
 			listOf(
 				EventWithContext(
-					messageFormat.formatToBytes(firstEvent), firstEvent.javaClass.simpleName, 0L, CreationContext(
-						User("::id::"), instant
+					messageFormat.format(firstEvent), firstEvent.javaClass.simpleName, 0L, CreationContext(
+						User("::id::"), instant.toEpochMilli()
 					)
 				),
 				EventWithContext(
-					messageFormat.formatToBytes(secondEvent), secondEvent.javaClass.simpleName, 0L, CreationContext(
-						User("::id::"), instant
+					messageFormat.format(secondEvent), secondEvent.javaClass.simpleName, 0L, CreationContext(
+						User("::id::"), instant.toEpochMilli()
 					)
 				)
 			)
@@ -57,7 +56,7 @@ class SyncEventPublisherTest {
 	@Test
 	fun `Handles exceptions`() {
 		val instant = Instant.now()
-		val messageFormat = TestMessageFormat(MyEvent::class.java)
+		val messageFormat = TestMessageFormat(MyEvent::class.java) as MessageFormat<Any>
 		val syncEventPublisher = SyncEventPublisher(mockedMessageBus, messageFormat)
 		val firstEvent = MyEvent("Foo")
 
@@ -72,8 +71,8 @@ class SyncEventPublisherTest {
 			syncEventPublisher.publish(
 				listOf(
 					EventWithContext(
-						messageFormat.formatToBytes(firstEvent), firstEvent.javaClass.simpleName, 0L, CreationContext(
-							User("::id::"), instant
+						messageFormat.format(firstEvent), firstEvent.javaClass.simpleName, 0L, CreationContext(
+							User("::id::"), instant.toEpochMilli()
 						)
 					)
 				)
