@@ -255,7 +255,7 @@ class SimpleIdentityAggregateRepositoryTest constructor(@Autowired val repo: Eve
 	@Test
 	fun `Creates snapshot at limit and keeps events in order`() {
 		val eventStore = repo as MysqlEventStore
-		eventStore.setEventLimit(3)
+		eventStore.setEventLimit(2)
 
 		var aggregate = TestAggregate(
 			"::id::", "::string::", 1, TestObject("::value::"),

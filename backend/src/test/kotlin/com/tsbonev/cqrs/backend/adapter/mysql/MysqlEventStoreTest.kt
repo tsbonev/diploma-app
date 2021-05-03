@@ -25,7 +25,7 @@ import org.hamcrest.CoreMatchers.`is` as Is
 @ExtendWith(SpringExtension::class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ComponentScan(basePackageClasses = [MysqlEventStore::class])
-@DataJpaTest
+@DataJpaTest(showSql = true)
 class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 
 	@Test
@@ -384,9 +384,7 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 		repo.saveEvents(
 			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
 			Events(
-				"::aggregateId::", 0L, listOf(
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-				)
+				"::aggregateId::", 0L, listOf()
 			),
 			SaveOptions(Snapshot(0L, BinaryPayload("::stub::")))
 		) as SaveEventsResponse.Success
@@ -398,9 +396,7 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 				EventSourcedAggregate(
 					AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
 					Events(
-						"::aggregateId::", 0L, listOf(
-							EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-							)
+						"::aggregateId::", 0L, listOf()
 					),
 					Snapshot(0L, BinaryPayload("::stub::"))
 				)
@@ -494,93 +490,5 @@ class MysqlEventStoreTest constructor(@Autowired val repo: EventStore) {
 		)))
 	}
 
-	@Test
-	fun `Removes snapshot when events reverted before it`() {
-		repo.saveEvents(
-			AggregateIdentity("::aggregateId::", "TestAggregate", 2L),
-			Events(
-				"::aggregateId::", 2L, listOf(
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
-				)
-			),
-			SaveOptions(Snapshot(1L, BinaryPayload("::stub::")))
-		) as SaveEventsResponse.Success
-
-		val response = repo.revertToVersion(
-			AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
-		)
-
-		val aggregateResponse = repo.getEvents("::aggregateId::")
-
-		assertThat(
-			response,
-			Is(
-				RevertEventsResponse.Success(
-					listOf(
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
-					)
-				)
-			)
-		)
-
-		assertThat(aggregateResponse, Is(
-			EventSourcedAggregate(
-				AggregateIdentity("::aggregateId::", "TestAggregate", 0L),
-				Events(
-					"::aggregateId::", 0L, listOf(
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-					)
-				)
-			)))
-	}
-
-	@Test
-	fun `Keeps snapshot when revers is after it`() {
-		repo.saveEvents(
-			AggregateIdentity("::aggregateId::", "TestAggregate", 2L),
-			Events(
-				"::aggregateId::", 2L, listOf(
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext()),
-					EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
-				)
-			),
-			SaveOptions(Snapshot(1L, BinaryPayload("::stub::")))
-		) as SaveEventsResponse.Success
-
-		val response = repo.revertToVersion(
-			AggregateIdentity("::aggregateId::", "TestAggregate", 1L),
-		)
-
-		val aggregateResponse = repo.getEvents("::aggregateId::")
-
-		assertThat(
-			response,
-			Is(
-				RevertEventsResponse.Success(
-					listOf(
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 2L, CreationContext())
-					)
-				)
-			)
-		)
-
-		assertThat(aggregateResponse, Is(
-			EventSourcedAggregate(
-				AggregateIdentity("::aggregateId::", "TestAggregate", 1L),
-				Events(
-					"::aggregateId::", 1L, listOf(
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 0L, CreationContext()),
-						EventWithContext(StubEvent().toString().toByteArray(), "StubEvent", 1L, CreationContext())
-					)
-				),
-				Snapshot(1L, BinaryPayload("::stub::"))
-			)))
-	}
-
 	data class StubEvent(val stubData: String = "::stub::") : Event
-	data class StubEventStability(val stubData: String = "::stub::", val stubDataStable: Long = 1L) : Event
 }

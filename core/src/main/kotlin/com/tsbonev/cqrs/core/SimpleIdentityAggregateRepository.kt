@@ -34,8 +34,6 @@ class SimpleIdentityAggregateRepository(
 	override fun <T : AggregateRoot> getById(aggregateId: String, type: Class<T>, identity: Identity): T {
 		val response = eventStore.getEvents(aggregateId)
 
-		if (response.aggregateIdentity.aggregateVersion == -1L) throw AggregateNotFoundException(aggregateId)
-
 		return buildAggregateFromHistory(
 			aggregateId,
 			type,
@@ -87,7 +85,7 @@ class SimpleIdentityAggregateRepository(
 
 		val aggregateClass = aggregate::class.java
 
-		val finalVersion = (if(initialVersion == 0L) -1L else initialVersion) + (events.size - 1)
+		val finalVersion = (if(initialVersion == 0L) -1L else initialVersion) + if(initialVersion != 0L) events.size -1 else events.size
 
 		val response = eventStore.saveEvents(
 			AggregateIdentity(aggregateId, aggregateClass.simpleName, initialVersion),
@@ -114,7 +112,7 @@ class SimpleIdentityAggregateRepository(
 				val currentAggregate = buildAggregateFromHistory(
 					aggregateId,
 					aggregateClass,
-					initialVersion,
+					response.currentEvents.finalVersion,
 					response.currentEvents,
 					response.currentSnapshot
 				)

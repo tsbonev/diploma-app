@@ -8,9 +8,11 @@ import com.tsbonev.cqrs.core.eventstore.EventSourcedAggregate
 import com.tsbonev.cqrs.core.eventstore.EventWithContext
 import com.tsbonev.cqrs.core.eventstore.Events
 import com.tsbonev.cqrs.core.snapshot.Snapshot
+import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
+import java.lang.RuntimeException
 import javax.persistence.CascadeType
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -23,51 +25,37 @@ import javax.persistence.OneToOne
 import javax.persistence.Table
 
 @Repository
-interface MysqlAggregateRepository : CrudRepository<AggregateEntity, String>
+interface MysqlAggregateRepository : JpaRepository<AggregateEntity, String>
 
 @Repository
-interface MysqlEventRepository : CrudRepository<EventEntity, String>
+interface MysqlEventRepository : JpaRepository<EventEntity, String> {
+	fun findByAggregateId(aggregateId: String): List<EventEntity>
+
+	fun findByAggregateIdAndVersionGreaterThan(aggregateId: String, version: Long): List<EventEntity>
+}
 
 @Repository
-interface MysqlSnapshotRepository : CrudRepository<SnapshotEntity, String>
+interface MysqlSnapshotRepository : JpaRepository<SnapshotEntity, String>
 
 @Entity
 @Table(name = "aggregates")
 data class AggregateEntity(
 	@Id val aggregateId: String,
 	val type: String,
-	val version: Long,
-	@OneToMany(cascade=[CascadeType.ALL], fetch = FetchType.LAZY) @JoinColumn(name="aggregateId") val events: List<EventEntity>,
-	@OneToOne val snapshot: SnapshotEntity?
+	val version: Long
 ) {
 	companion object {
-		fun fromEventSourcedAggregate(es: EventSourcedAggregate) : AggregateEntity {
+		fun fromAggregateIdentity(identity: AggregateIdentity) : AggregateEntity {
 			return AggregateEntity(
-				es.aggregateIdentity.aggregateId,
-				es.aggregateIdentity.aggregateType,
-				es.aggregateIdentity.aggregateVersion,
-				EventEntity.fromEvents(es.events),
-				SnapshotEntity.fromSnapshot(es.aggregateIdentity.aggregateId, es.snapshot)
+				identity.aggregateId,
+				identity.aggregateType,
+				identity.aggregateVersion
 			)
 		}
 	}
 
-	fun toEventSourcedAggregateEntityAccountingForSnapshot(): EventSourcedAggregate {
-		return if (this.snapshot != null) {
-			EventSourcedAggregate(
-				AggregateIdentity(this.aggregateId, this.type, this.version),
-				Events(this.aggregateId, this.version, this.events.filter { it.version > snapshot.version }.map { it.toEventWithContext() }),
-				this.snapshot.toSnapshot()
-			)
-		} else this.toEventSourcedAggregate()
-	}
-
-	fun toEventSourcedAggregate() : EventSourcedAggregate {
-		return EventSourcedAggregate(
-			AggregateIdentity(this.aggregateId, this.type, this.version),
-			Events(this.aggregateId, this.version, this.events.map { it.toEventWithContext() }),
-			this.snapshot?.toSnapshot()
-		)
+	fun toAggregateIdentity() : AggregateIdentity {
+		return AggregateIdentity(this.aggregateId, this.type, this.version)
 	}
 }
 
@@ -79,14 +67,15 @@ data class EventEntity(
 	val kind: String,
 	val data: ByteArray,
 	val version: Long,
-	val context: String
+	val context: String,
+	val aggregateId: String
 ) {
 	companion object {
 		fun fromEvents(events: Events) : List<EventEntity> {
 			return events.events.map { event ->
 				EventEntity("${events.aggregateId}_${event.version}",
 				            event.kind, event.eventData, event.version,
-				            Gson().toJson(event.creationContext))
+				            Gson().toJson(event.creationContext), events.aggregateId)
 			}
 		}
 	}
@@ -94,6 +83,13 @@ data class EventEntity(
 	fun toEventWithContext() : EventWithContext {
 		return EventWithContext(data, kind, version, Gson().fromJson(context, CreationContext::class.java))
 	}
+}
+
+fun List<EventEntity>.toEvents(): Events {
+	val firstEvent = this.maxByOrNull { it.version }
+	return Events(firstEvent!!.aggregateId, firstEvent.version, this.map {
+		it.toEventWithContext()
+	} )
 }
 
 @Entity
@@ -115,3 +111,5 @@ data class SnapshotEntity(
 		return Snapshot(version, BinaryPayload(data))
 	}
 }
+
+class EventsNotFoundException : RuntimeException()
