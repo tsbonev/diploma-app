@@ -1,7 +1,6 @@
 package com.tsbonev.cqrs.core.eventstore
 
 import com.tsbonev.cqrs.core.snapshot.Snapshot
-import java.time.Instant
 
 data class AggregateIdentity(val aggregateId: String, val aggregateType: String = "", val aggregateVersion: Long = 0L)
 

@@ -6,8 +6,10 @@ import com.tsbonev.cqrs.backend.domain.CreateProductCommand
 import com.tsbonev.cqrs.backend.domain.ProductCreatedCommandResponse
 import com.tsbonev.cqrs.backend.domain.ProductNameChangedCommandResponse
 import com.tsbonev.cqrs.backend.domain.ProductNumberChangedCommandResponse
+import com.tsbonev.cqrs.backend.view.mysql.MysqlProductView
 import com.tsbonev.cqrs.core.messagebus.MessageBus
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -20,7 +22,8 @@ import java.util.UUID
 @RestController
 @RequestMapping("/products")
 class ProductController(
-	@Autowired val messageBus: MessageBus
+	@Autowired val messageBus: MessageBus,
+	@Autowired val productView: MysqlProductView
 ) {
 
 	@PostMapping
@@ -49,6 +52,13 @@ class ProductController(
 		if(commandResponse.isPresent) return ProductNumberChangedResponse(commandResponse.get() as ProductNumberChangedCommandResponse)
 		else throw MessageBusException()
 	}
+
+	@GetMapping
+	fun getAllProducts(): ProductsResponse {
+		val products = productView.findAll()
+
+		return ProductsResponse(products.map{ ProductDto(it.productId, it.productName) })
+	}
 }
 
 class MessageBusException : RuntimeException()
@@ -68,3 +78,5 @@ data class ProductNumberChangedResponse(val id: String, val number: Long) {
 	constructor(response: ProductNumberChangedCommandResponse) : this(response.productId, response.number)
 }
 
+data class ProductsResponse(val products: List<ProductDto>)
+data class ProductDto(val productId: String, val name: String)

@@ -70,7 +70,7 @@ class SimpleIdentityAggregateRepository(
 
 		val events = uncommittedEvents.map {
 			EventWithContext(
-				messageFormat.format(it)!!,
+				messageFormat.format(it),
 				it::class.java.simpleName,
 				0L,
 				CreationContext(User(identity.id), identity.time)

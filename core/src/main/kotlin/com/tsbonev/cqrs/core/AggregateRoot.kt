@@ -18,33 +18,34 @@ interface AggregateRoot {
 	 */
 	fun getId(): String
 
+	/**
+	 * Clears the events stored to be applied.
+	 */
 	fun commitEvents()
 
+	/**
+	 * Returns a list of events to be applied.
+	 */
 	fun getEvents(): List<Event>
 
 	/**
-	 * Builds the state of an aggregate from a given history
-	 *
-	 * @param history
-	 * @param version the version of the aggregate
-	 * @throws HydrationException
+	 * Builds the state of an aggregate from a given history.
 	 */
 	fun buildFromHistory(history: Iterable<Event>, version: Long)
 
 	/**
-	 * Returns the version of the aggregate when it was hydrated
-	 * @return
+	 * Returns the version of the aggregate.
 	 */
 	fun getExpectedVersion(): Long
 
 	/**
 	 * Returns a SnapshotMapper that will be used in creation
-	 * of Snapshots for the EventStore
+	 * of Snapshots for the EventStore.
 	 */
 	fun getSnapshotMapper(): SnapshotMapper<AggregateRoot>
 
 	/**
-	 * Builds an aggregate from snapshot data and the current version of the snapshot
+	 * Builds an aggregate from snapshot data and the current version of the snapshot.
 	 */
 	fun <T : AggregateRoot> fromSnapshot(snapshotData: Any, snapshotVersion: Long, messageFormat: MessageFormat<Any>): T
 }
